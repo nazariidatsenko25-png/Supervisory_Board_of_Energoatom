@@ -3,8 +3,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useStore } from '@/store/agentStore';
 
-export default function MockChatWidget() {
-  const [isOpen, setIsOpen] = useState(false);
+export default function MockChatWidget({ agentId }: { agentId?: string }) {
+  const [isOpen, setIsOpen] = useState(!!agentId);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -29,11 +29,20 @@ export default function MockChatWidget() {
     setLoading(true);
 
     try {
-      const config = getAgentConfig();
-      const payload = {
-        ...config,
-        message: userMessage
-      };
+      let payload;
+      if (agentId) {
+        payload = {
+          agent_id: agentId,
+          message: userMessage,
+          session_id: null
+        };
+      } else {
+        const config = getAgentConfig();
+        payload = {
+          ...config,
+          message: userMessage
+        };
+      }
 
       const response = await fetch('http://localhost:8000/api/chat/stream', {
         method: 'POST',
@@ -143,17 +152,21 @@ export default function MockChatWidget() {
 
   return (
     <>
-      <button
-        onClick={() => setIsOpen(true)}
-        className={`fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-full shadow-xl flex items-center justify-center text-white hover:scale-105 transition-transform z-50 ${isOpen ? 'scale-0 opacity-0' : 'scale-100 opacity-100'}`}
-      >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-        </svg>
-      </button>
+      {!agentId && (
+        <button
+          onClick={() => setIsOpen(true)}
+          className={`fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-full shadow-xl flex items-center justify-center text-white hover:scale-105 transition-transform z-50 ${isOpen ? 'scale-0 opacity-0' : 'scale-100 opacity-100'}`}
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+          </svg>
+        </button>
+      )}
 
       <div 
-        className={`fixed bottom-6 right-6 w-[380px] h-[600px] max-h-[85vh] bg-gray-50 rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 origin-bottom-right z-50 border border-gray-100 ${isOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'}`}
+        className={agentId 
+          ? `w-full h-screen bg-gray-50 flex flex-col overflow-hidden`
+          : `fixed bottom-6 right-6 w-[380px] h-[600px] max-h-[85vh] bg-gray-50 rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 origin-bottom-right z-50 border border-gray-100 ${isOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'}`}
       >
         <div className="bg-white border-b px-5 py-4 flex justify-between items-center z-10">
           <div className="flex items-center gap-3">
@@ -163,14 +176,16 @@ export default function MockChatWidget() {
               <p className="text-[10px] text-gray-500 font-medium">ReAct Live Tracking</p>
             </div>
           </div>
-          <button 
-            onClick={() => setIsOpen(false)}
-            className="text-gray-400 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 w-8 h-8 rounded-full flex items-center justify-center transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          {!agentId && (
+            <button 
+              onClick={() => setIsOpen(false)}
+              className="text-gray-400 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 scroll-smooth">
