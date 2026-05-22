@@ -102,12 +102,21 @@ export default function MockChatWidget({ agentId }: { agentId?: string }) {
             </div>
           </div>
         );
+      case 'status':
+        return (
+          <div key={index} className="mb-2 text-center animate-fade-in">
+            <span className="text-[10px] text-[var(--text-tertiary)] font-mono-brand">{msg.content}</span>
+          </div>
+        );
       case 'thought':
         return (
           <div key={index} className="flex justify-start mb-2 animate-fade-in">
-            <div className="flex items-center gap-2 text-[var(--text-tertiary)] bg-[var(--bg-elevated)] rounded-lg px-3 py-1.5 text-xs border border-[var(--border)]">
-              <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-pulse"></div>
-              <span className="italic font-mono-brand">{msg.content}</span>
+            <div className="max-w-[90%] bg-[var(--bg-elevated)] rounded-lg px-3 py-2 text-xs border border-[var(--border)]">
+              <div className="flex items-center gap-1.5 mb-1 text-[var(--accent)] font-mono-brand text-[10px] uppercase tracking-wider font-semibold">
+                <span>🧠</span>
+                Thinking
+              </div>
+              <p className="text-[var(--text-secondary)] leading-relaxed">{msg.content}</p>
             </div>
           </div>
         );
@@ -131,7 +140,7 @@ export default function MockChatWidget({ agentId }: { agentId?: string }) {
                   <span>◉</span>
                   Observation
                 </div>
-                <div className="line-clamp-3 text-[11px] leading-relaxed text-[var(--text-secondary)]">{msg.content}</div>
+                <div className="line-clamp-4 text-[11px] leading-relaxed text-[var(--text-secondary)]">{msg.content}</div>
              </div>
           </div>
         );

@@ -33,6 +33,7 @@ else:
     print("Warning: SUPABASE_URL or SUPABASE_KEY is missing in .env")
 
 class AgentConfig(BaseModel):
+    name: str = "Unnamed Agent"
     system_prompt: str
     tools: List[str] = []
     max_iterations: int = 5
@@ -46,12 +47,16 @@ class StreamRequest(BaseModel):
     max_iterations: Optional[int] = 5
     mock: Optional[bool] = False
 
+
+# ─── AGENT CRUD ───
+
 @app.post("/api/agents")
 async def create_agent(config: AgentConfig):
     if not supabase:
         raise HTTPException(status_code=500, detail="Supabase client not initialized")
     
     response = supabase.table("agents").insert({
+        "name": config.name,
         "system_prompt": config.system_prompt,
         "tools": config.tools,
         "max_iterations": config.max_iterations
@@ -61,6 +66,39 @@ async def create_agent(config: AgentConfig):
         raise HTTPException(status_code=500, detail="Failed to create agent")
         
     return {"agent_id": response.data[0]["id"]}
+
+
+@app.get("/api/agents")
+async def list_agents():
+    """List all created agents."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Supabase client not initialized")
+    
+    response = supabase.table("agents").select("*").order("created_at", desc=True).execute()
+    
+    return {"agents": response.data or []}
+
+
+@app.delete("/api/agents/{agent_id}")
+async def delete_agent(agent_id: str):
+    """Delete an agent by ID."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Supabase client not initialized")
+    
+    # First delete related sessions and messages
+    sessions = supabase.table("sessions").select("id").eq("agent_id", agent_id).execute()
+    if sessions.data:
+        for session in sessions.data:
+            supabase.table("messages").delete().eq("session_id", session["id"]).execute()
+        supabase.table("sessions").delete().eq("agent_id", agent_id).execute()
+    
+    # Delete the agent
+    response = supabase.table("agents").delete().eq("id", agent_id).execute()
+    
+    return {"status": "deleted", "agent_id": agent_id}
+
+
+# ─── CHAT STREAMING ───
 
 async def sse_generator_wrapper(generator, session_id: Optional[str]):
     """Wraps the execute_agent generator to intercept the final message and save it."""
@@ -84,19 +122,21 @@ async def sse_generator_wrapper(generator, session_id: Optional[str]):
 
 async def mock_generator(user_message: str):
     """Презентаційний Mock Mode: імітує повний ReAct цикл без реального LLM API."""
-    import random
+    await asyncio.sleep(0.3)
+    yield f"data: {json.dumps({'type': 'status', 'content': 'Підключення до AI моделі...'})}\n\n"
     await asyncio.sleep(0.5)
-    yield f"data: {json.dumps({'type': 'thought', 'content': 'Аналізую запит користувача та визначаю стратегію відповіді...'})}\n\n"
-    await asyncio.sleep(1.2)
-    yield f"data: {json.dumps({'type': 'thought', 'content': 'Вирішую скористатися пошуком в інтернеті для отримання актуальної інформації.'})}\n\n"
-    await asyncio.sleep(0.8)
-    yield f"data: {json.dumps({'type': 'action', 'tool': 'web_search', 'args': {'query': user_message}})}\n\n"
-    await asyncio.sleep(1.5)
-    yield f"data: {json.dumps({'type': 'observation', 'content': f'Знайдено 5 релевантних результатів для запиту: {user_message}. Джерела включають аналітичні портали та офіційні сайти.'})}\n\n"
+    yield f"data: {json.dumps({'type': 'thought', 'content': f'Користувач запитує про \"{user_message}\". Мені потрібно проаналізувати, чи потребує це актуальних даних з інтернету, чи я можу відповісти з наявних знань.'})}\n\n"
     await asyncio.sleep(1.0)
-    yield f"data: {json.dumps({'type': 'thought', 'content': 'Синтезую отриману інформацію у фінальну відповідь...'})}\n\n"
+    yield f"data: {json.dumps({'type': 'thought', 'content': 'Це питання потребує актуальної інформації. Вирішую скористатися пошуком Tavily для отримання свіжих даних.'})}\n\n"
+    await asyncio.sleep(0.6)
+    yield f"data: {json.dumps({'type': 'action', 'tool': 'web_search', 'args': {'query': user_message}})}\n\n"
+    yield f"data: {json.dumps({'type': 'status', 'content': 'Виконую web_search...'})}\n\n"
     await asyncio.sleep(1.5)
-    yield f"data: {json.dumps({'type': 'message', 'content': f'На основі аналізу актуальних даних щодо \"{user_message}\", ось що я знайшов:\n\n📊 **Ключові висновки:**\n1. Тема активно обговорюється в експертному середовищі.\n2. Знайдено кілька авторитетних джерел з актуальними даними.\n3. Основні тренди вказують на позитивну динаміку.\n\n💡 Це демонстрація Live Tracking — ви бачили процес мислення агента в реальному часі!'})}\n\n"
+    yield f"data: {json.dumps({'type': 'observation', 'content': f'Знайдено 5 релевантних результатів. Джерела: Wikipedia, Reuters, офіційні портали. Дані актуальні станом на 2026 рік.'})}\n\n"
+    await asyncio.sleep(0.8)
+    yield f"data: {json.dumps({'type': 'thought', 'content': 'Тепер у мене є актуальні дані з кількох авторитетних джерел. Синтезую інформацію у структуровану відповідь.'})}\n\n"
+    await asyncio.sleep(1.0)
+    yield f"data: {json.dumps({'type': 'message', 'content': f'На основі аналізу актуальних даних щодо \"{user_message}\":\\n\\n📊 **Ключові висновки:**\\n1. Тема активно обговорюється в експертному середовищі.\\n2. Знайдено кілька авторитетних джерел з актуальними даними.\\n3. Основні тренди вказують на позитивну динаміку.\\n\\n💡 *Це демонстрація Live Tracking — ви бачили процес мислення агента в реальному часі!*'})}\n\n"
 
 
 @app.post("/api/chat/stream")
@@ -142,7 +182,7 @@ async def chat_stream(request: StreamRequest):
             "content": request.message
         }).execute()
     else:
-        # Mock/Demo mode (no DB)
+        # Direct mode (no DB, from builder preview)
         system_prompt = request.system_prompt or ""
         tools_config = request.tools or []
         max_iterations = request.max_iterations or 5

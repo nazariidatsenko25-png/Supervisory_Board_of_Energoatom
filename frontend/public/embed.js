@@ -32,7 +32,7 @@
           <path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
         </svg>
     `;
-    btn.style.cssText = 'position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px; border-radius: 28px; border: none; background: linear-gradient(to top right, #2563eb, #4f46e5); color: #fff; cursor: pointer; z-index: 999999; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); transition: transform 0.2s ease;';
+    btn.style.cssText = 'position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px; border-radius: 28px; border: none; background: #00E5C7; color: #0C0C0E; cursor: pointer; z-index: 999999; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 30px rgba(0, 229, 199, 0.3), 0 10px 15px -3px rgba(0, 0, 0, 0.2); transition: transform 0.2s ease;';
     
     btn.onmouseover = () => { btn.style.transform = 'scale(1.05)'; };
     btn.onmouseout = () => { btn.style.transform = 'scale(1)'; };

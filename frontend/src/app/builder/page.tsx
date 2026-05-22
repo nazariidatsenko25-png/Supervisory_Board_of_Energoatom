@@ -13,6 +13,8 @@ export default function BuilderPage() {
   const [isDeploying, setIsDeploying] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [generatedScript, setGeneratedScript] = useState('');
+  const [agentName, setAgentName] = useState('');
+  const [deployedAgentId, setDeployedAgentId] = useState('');
 
   const nodeTypes = useMemo(() => ({
     prompt: PromptNode,
@@ -27,7 +29,10 @@ export default function BuilderPage() {
       const res = await fetch('http://localhost:8000/api/agents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config)
+        body: JSON.stringify({
+          name: agentName || 'Unnamed Agent',
+          ...config
+        })
       });
       
       if (!res.ok) {
@@ -35,6 +40,7 @@ export default function BuilderPage() {
       }
       
       const data = await res.json();
+      setDeployedAgentId(data.agent_id);
       setGeneratedScript(`<script src="http://localhost:3000/embed.js" data-agent="${data.agent_id}" defer></script>`);
       setShowSuccessModal(true);
     } catch (e) {
@@ -52,31 +58,36 @@ export default function BuilderPage() {
   return (
     <div className="h-screen w-full flex flex-col bg-[var(--bg-primary)]">
       {/* Header */}
-      <header className="bg-[var(--bg-secondary)] border-b border-[var(--border)] px-6 py-4 flex items-center justify-between z-10">
+      <header className="bg-[var(--bg-secondary)] border-b border-[var(--border)] px-6 py-3 flex items-center justify-between z-10">
         <div className="flex items-center gap-4">
           <a href="/" className="font-display text-lg text-[var(--text-primary)] hover:text-[var(--accent)] transition-colors">
             Agentic Studio
           </a>
           <div className="w-px h-5 bg-[var(--border)]"></div>
-          <div>
-            <h1 className="text-sm font-semibold text-[var(--text-primary)]">Builder</h1>
-            <p className="text-xs text-[var(--text-tertiary)]">Складіть логіку вашого агента</p>
+          <div className="flex items-center gap-3">
+            <input
+              type="text"
+              value={agentName}
+              onChange={(e) => setAgentName(e.target.value)}
+              placeholder="Agent name..."
+              className="bg-transparent border-b border-[var(--border)] focus:border-[var(--accent)] text-sm font-semibold text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none py-1 px-1 w-48 transition-colors"
+            />
           </div>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-center">
+          <a 
+            href="/agents"
+            className="px-3 py-1.5 text-[var(--text-secondary)] text-sm font-medium hover:text-[var(--text-primary)] transition-colors"
+          >
+            My Agents
+          </a>
           <button 
             onClick={handleDeploy}
             disabled={isDeploying}
             className="px-5 py-2 bg-[var(--accent)] hover:brightness-110 disabled:opacity-50 text-[var(--text-inverse)] rounded-lg text-sm font-semibold transition-all hover:shadow-[0_0_24px_var(--accent-glow-strong)] flex items-center gap-2"
           >
-            {isDeploying ? 'Deploying...' : 'Deploy Agent →'}
+            {isDeploying ? 'Deploying...' : 'Save & Deploy →'}
           </button>
-          <a 
-            href="/"
-            className="px-4 py-2 border border-[var(--border)] hover:border-[var(--text-tertiary)] text-[var(--text-secondary)] rounded-lg text-sm font-medium transition-colors"
-          >
-            Preview
-          </a>
         </div>
       </header>
 
@@ -113,7 +124,10 @@ export default function BuilderPage() {
                   <div className="w-8 h-8 rounded-lg bg-[var(--accent-glow)] flex items-center justify-center">
                     <span className="text-[var(--accent)]">✓</span>
                   </div>
-                  <h2 className="text-lg font-semibold text-[var(--text-primary)]">Agent Deployed</h2>
+                  <div>
+                    <h2 className="text-lg font-semibold text-[var(--text-primary)]">Agent Deployed</h2>
+                    <p className="text-xs text-[var(--text-tertiary)] font-mono-brand">{deployedAgentId.slice(0, 8)}...</p>
+                  </div>
                 </div>
                 <button 
                   onClick={() => setShowSuccessModal(false)}
@@ -137,6 +151,20 @@ export default function BuilderPage() {
                     className="absolute top-3 right-3 bg-[var(--bg-elevated)] hover:bg-[var(--border-light)] text-[var(--text-secondary)] px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border border-[var(--border)]"
                   >
                     Copy
+                  </button>
+                </div>
+                <div className="mt-6 flex gap-3 justify-end">
+                  <a
+                    href="/agents"
+                    className="px-4 py-2 bg-[var(--accent)] text-[var(--text-inverse)] rounded-lg text-sm font-semibold hover:brightness-110 transition-all"
+                  >
+                    View All Agents →
+                  </a>
+                  <button 
+                    onClick={() => setShowSuccessModal(false)}
+                    className="px-4 py-2 border border-[var(--border)] text-[var(--text-secondary)] rounded-lg text-sm font-medium hover:border-[var(--text-tertiary)] transition-colors"
+                  >
+                    Continue Editing
                   </button>
                 </div>
               </div>

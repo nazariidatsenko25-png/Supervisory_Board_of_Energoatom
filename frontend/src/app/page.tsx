@@ -3,6 +3,19 @@ import MockChatWidget from '@/components/MockChatWidget';
 export default function Home() {
   return (
     <main className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
+      {/* Navigation */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-[var(--bg-primary)]/80 backdrop-blur-xl border-b border-[var(--border)]">
+        <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
+          <span className="font-display text-lg">Agentic Studio</span>
+          <div className="flex items-center gap-6">
+            <a href="/agents" className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">My Agents</a>
+            <a href="/builder" className="px-4 py-1.5 bg-[var(--accent)] text-[var(--text-inverse)] rounded-lg text-sm font-semibold hover:brightness-110 transition-all">
+              Builder
+            </a>
+          </div>
+        </div>
+      </nav>
+
       {/* Hero Section */}
       <section className="relative overflow-hidden min-h-[90vh] flex items-center noise-overlay">
         {/* Gradient orb background */}
