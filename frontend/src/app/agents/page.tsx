@@ -8,7 +8,6 @@ type Agent = {
   system_prompt: string;
   tools: string[];
   max_iterations: number;
-  created_at: string;
 };
 
 export default function AgentsPage() {
@@ -192,7 +191,6 @@ export default function AgentsPage() {
                         </span>
                       )}
                       <span>⚙ max {agent.max_iterations} steps</span>
-                      <span>{new Date(agent.created_at).toLocaleDateString()}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">

@@ -4,7 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c4dc9d51-c515-4cd7-95bc-96f104443186" name="Changes" comment="" />
+    <list default="true" id="c4dc9d51-c515-4cd7-95bc-96f104443186" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/backend/engine/react_loop.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/engine/react_loop.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/app/agents/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/agents/page.tsx" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />

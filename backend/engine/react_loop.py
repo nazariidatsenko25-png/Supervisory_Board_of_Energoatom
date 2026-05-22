@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import asyncio
 from google import genai
@@ -34,6 +35,9 @@ You: "THINK: The user wants the current population of Tokyo. This is a factual q
 After results: "THINK: I found several sources. According to the most recent data..."
 [Then you give a final answer]
 """
+
+# Maximum number of retries for rate-limited requests
+MAX_RETRIES = 3
 
 
 def get_client():
@@ -80,6 +84,74 @@ def extract_thoughts(text: str) -> tuple[list[str], str]:
     return thoughts, remaining
 
 
+def parse_retry_delay(error_msg: str) -> int:
+    """
+    Extract the retry delay (in seconds) from a Gemini 429 error message.
+    Falls back to 10 seconds if parsing fails.
+    """
+    match = re.search(r'retry\s*(?:in|after)\s+(\d+)', error_msg, re.IGNORECASE)
+    if match:
+        return min(int(match.group(1)), 60)  # Cap at 60s
+    # Try float format: "retryDelay": "53s"
+    match = re.search(r'"retryDelay":\s*"(\d+)s?"', error_msg)
+    if match:
+        return min(int(match.group(1)), 60)
+    return 10
+
+
+def format_api_error(error_msg: str) -> str:
+    """
+    Convert raw API error into a user-friendly message (Ukrainian).
+    """
+    if "RESOURCE_EXHAUSTED" in error_msg or "429" in error_msg:
+        if "limit: 0" in error_msg:
+            return (
+                "⚠️ Денний ліміт безкоштовного Gemini API вичерпано. "
+                "Спробуйте пізніше або оновіть API-ключ на https://aistudio.google.com/apikey"
+            )
+        return "⏳ API тимчасово перевантажено. Повторюю запит..."
+    if "INVALID_API_KEY" in error_msg or "API_KEY_INVALID" in error_msg:
+        return "🔑 Невалідний API-ключ Gemini. Перевірте GEMINI_API_KEY в .env"
+    if "PERMISSION_DENIED" in error_msg:
+        return "🔒 Доступ заборонено. Перевірте налаштування проєкту Google Cloud."
+    return f"Помилка API: {error_msg[:200]}"
+
+
+async def call_model_with_retry(chat, message, max_retries=MAX_RETRIES):
+    """
+    Send a message to the model with retry logic for rate limits.
+    Yields status events during waits. Returns (response, status_events).
+    """
+    status_events = []
+    last_error = None
+    
+    for attempt in range(max_retries):
+        try:
+            response = chat.send_message(message)
+            return response, status_events
+        except Exception as e:
+            error_msg = str(e)
+            last_error = e
+            
+            is_rate_limit = "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg
+            
+            if is_rate_limit and attempt < max_retries - 1:
+                # Check if it's a hard zero limit (daily exhausted)
+                if "limit: 0" in error_msg:
+                    raise  # No point retrying — daily quota is gone
+                    
+                delay = parse_retry_delay(error_msg)
+                status_events.append({
+                    'type': 'status', 
+                    'content': f'⏳ Rate limit — очікування {delay}с (спроба {attempt + 2}/{max_retries})...'
+                })
+                await asyncio.sleep(delay)
+            else:
+                raise
+    
+    raise last_error
+
+
 async def execute_agent(system_prompt: str, tools_config: list[str], max_iterations: int, user_message: str):
     """
     Executes the ReAct loop using Gemini 2.0 Flash.
@@ -120,23 +192,17 @@ async def execute_agent(system_prompt: str, tools_config: list[str], max_iterati
     for i in range(max_iterations):
         yield f"data: {json.dumps({'type': 'status', 'content': f'Крок {i+1}/{max_iterations} — модель аналізує...'})}\n\n"
         
+        message_to_send = messages.pop() if messages else ""
+        
         try:
-            message_to_send = messages.pop() if messages else ""
-            response = chat.send_message(message_to_send)
+            response, status_events = await call_model_with_retry(chat, message_to_send)
+            # Emit any retry status events
+            for evt in status_events:
+                yield f"data: {json.dumps(evt)}\n\n"
         except Exception as e:
-            error_msg = str(e)
-            # Retry once on rate limit (429)
-            if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
-                yield f"data: {json.dumps({'type': 'status', 'content': 'API ліміт. Повторюю через 3 секунди...'})}\n\n"
-                await asyncio.sleep(3)
-                try:
-                    response = chat.send_message(message_to_send)
-                except Exception as retry_e:
-                    yield f"data: {json.dumps({'type': 'message', 'content': f'Помилка API: {str(retry_e)}'})}\n\n"
-                    break
-            else:
-                yield f"data: {json.dumps({'type': 'message', 'content': f'Помилка API: {error_msg}'})}\n\n"
-                break
+            friendly_msg = format_api_error(str(e))
+            yield f"data: {json.dumps({'type': 'message', 'content': friendly_msg})}\n\n"
+            break
             
         # --- Process tool calls ---
         if response.function_calls:

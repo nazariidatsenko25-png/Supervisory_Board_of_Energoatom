@@ -74,7 +74,7 @@ async def list_agents():
     if not supabase:
         raise HTTPException(status_code=500, detail="Supabase client not initialized")
     
-    response = supabase.table("agents").select("*").order("created_at", desc=True).execute()
+    response = supabase.table("agents").select("*").execute()
     
     return {"agents": response.data or []}
 
