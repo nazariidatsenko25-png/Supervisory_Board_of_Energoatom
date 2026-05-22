@@ -8,3 +8,5 @@ venv/
 .next/
 dist/
 build/
+.DS_Store
+*.DS_Store
