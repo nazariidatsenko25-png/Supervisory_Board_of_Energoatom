@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Bot, Brain, Send } from 'lucide-react';
 
 type Agent = {
   id: string;
@@ -18,6 +19,7 @@ export default function AgentsPage() {
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const fetchAgents = async () => {
     try {
@@ -35,13 +37,15 @@ export default function AgentsPage() {
     fetchAgents();
   }, []);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Видалити цього агента?')) return;
+  const confirmDelete = async () => {
+    if (!deleteConfirmId) return;
     try {
-      await fetch(`http://localhost:8000/api/agents/${id}`, { method: 'DELETE' });
-      setAgents(prev => prev.filter(a => a.id !== id));
+      await fetch(`http://localhost:8000/api/agents/${deleteConfirmId}`, { method: 'DELETE' });
+      setAgents(prev => prev.filter(a => a.id !== deleteConfirmId));
     } catch (e) {
       console.error('Failed to delete:', e);
+    } finally {
+      setDeleteConfirmId(null);
     }
   };
 
@@ -103,7 +107,7 @@ export default function AgentsPage() {
     if (msg.type === 'thought') return (
       <div key={i} className="mb-1.5">
         <div className="text-xs text-[var(--text-tertiary)] bg-[var(--bg-elevated)] rounded-lg px-3 py-1.5 border border-[var(--border)] inline-flex items-center gap-1.5">
-          <span className="text-[var(--accent)]">🧠</span>
+          <Brain className="w-3 h-3 text-[var(--accent)]" />
           <span className="italic font-mono-brand">{msg.content}</span>
         </div>
       </div>
@@ -162,7 +166,9 @@ export default function AgentsPage() {
           </div>
         ) : agents.length === 0 ? (
           <div className="text-center py-20">
-            <div className="w-16 h-16 rounded-2xl bg-[var(--accent-glow)] flex items-center justify-center mx-auto mb-4 text-2xl">🤖</div>
+            <div className="w-16 h-16 rounded-2xl bg-[var(--accent-glow)] flex items-center justify-center mx-auto mb-4">
+              <Bot className="w-8 h-8 text-[var(--accent)]" />
+            </div>
             <h2 className="text-xl font-semibold mb-2">Ще немає агентів</h2>
             <p className="text-[var(--text-tertiary)] mb-6 text-sm">Створіть першого агента у візуальному конструкторі</p>
             <a href="/builder" className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--accent)] text-[var(--text-inverse)] rounded-lg text-sm font-semibold">
@@ -172,7 +178,7 @@ export default function AgentsPage() {
         ) : (
           <div className="grid gap-4">
             {agents.map(agent => (
-              <div key={agent.id} className="bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl p-5 hover:border-[var(--text-tertiary)] transition-colors group">
+              <div key={agent.id} className="bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl p-5 hover:border-[var(--accent)]/50 hover:shadow-[0_8px_30px_var(--accent-glow)] hover:-translate-y-0.5 transition-all duration-300 group cursor-default">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-2">
@@ -207,8 +213,8 @@ export default function AgentsPage() {
                       Embed
                     </button>
                     <button
-                      onClick={() => handleDelete(agent.id)}
-                      className="px-3 py-1.5 border border-[var(--border)] text-[var(--error)] rounded-lg text-xs font-medium hover:bg-[var(--error)] hover:text-white hover:border-[var(--error)] transition-all"
+                      onClick={() => setDeleteConfirmId(agent.id)}
+                      className="px-3 py-1.5 border border-[var(--error)]/30 text-[var(--error)] rounded-lg text-xs font-medium hover:bg-[var(--error)] hover:text-white hover:border-[var(--error)] transition-all"
                     >
                       Delete
                     </button>
@@ -239,6 +245,32 @@ export default function AgentsPage() {
               >
                 Copy to Clipboard
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Modal */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4" onClick={() => setDeleteConfirmId(null)}>
+          <div className="bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl w-full max-w-sm overflow-hidden animate-fade-in-up" onClick={e => e.stopPropagation()}>
+            <div className="p-6 text-center">
+              <h2 className="font-semibold text-lg mb-2">Видалити агента?</h2>
+              <p className="text-sm text-[var(--text-secondary)] mb-6">Цю дію неможливо скасувати. Агент буде видалений назавжди.</p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteConfirmId(null)}
+                  className="flex-1 px-4 py-2 border border-[var(--border)] text-[var(--text-primary)] rounded-lg text-sm font-medium hover:bg-[var(--bg-elevated)] transition-colors"
+                >
+                  Скасувати
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 px-4 py-2 bg-[var(--error)] text-white rounded-lg text-sm font-semibold hover:brightness-110 transition-all"
+                >
+                  Видалити
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -282,9 +314,9 @@ export default function AgentsPage() {
               <button
                 type="submit"
                 disabled={chatLoading || !chatInput.trim()}
-                className="px-4 py-2.5 bg-[var(--accent)] text-[var(--text-inverse)] rounded-lg text-sm font-semibold disabled:opacity-40 hover:brightness-110 transition-all"
+                className="px-4 py-2.5 bg-[var(--accent)] text-[var(--text-inverse)] rounded-lg text-sm font-semibold disabled:opacity-40 hover:brightness-110 transition-all flex items-center justify-center"
               >
-                →
+                <Send className="w-4 h-4" />
               </button>
             </form>
           </div>

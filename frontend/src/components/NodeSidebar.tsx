@@ -2,6 +2,7 @@
 
 import { useState, DragEvent } from 'react';
 import { NODE_CATALOG, CATEGORIES, NodeCatalogItem } from '@/store/agentStore';
+import { getLucideIcon } from '@/components/Icons';
 
 export function NodeSidebar() {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -105,7 +106,7 @@ export function NodeSidebar() {
                 >
                   <path d="m9 18 6-6-6-6" />
                 </svg>
-                <span>{cat.icon}</span>
+                {getLucideIcon(cat.icon, "w-4 h-4 text-[var(--accent)]")}
                 <span>{cat.label}</span>
                 <span className="ml-auto text-[10px] font-normal opacity-60">{items.length}</span>
               </button>
@@ -133,7 +134,7 @@ export function NodeSidebar() {
                         className="w-7 h-7 rounded-md flex items-center justify-center text-sm flex-shrink-0 transition-colors"
                         style={{ background: getNodeGlow(item.type) }}
                       >
-                        {item.icon}
+                        {getLucideIcon(item.icon, "w-4 h-4 text-[var(--text-inverse)]")}
                       </div>
                       <div className="min-w-0">
                         <span className="text-xs font-medium text-[var(--text-primary)] block leading-tight truncate">

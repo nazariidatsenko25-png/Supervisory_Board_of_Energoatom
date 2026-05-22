@@ -55,3 +55,50 @@ async def calculator(expression: str) -> str:
         return f"Result: {expression} = {result}"
     except Exception as e:
         return f"Error calculating '{expression}': {str(e)}"
+
+
+async def call_api(url: str, method: str = "GET", headers: str = "", body: str = "") -> str:
+    """
+    Make an HTTP request to an external API and return the response.
+
+    Args:
+        url: The full URL to send the request to.
+        method: HTTP method (GET, POST, PUT, PATCH, DELETE).
+        headers: JSON string of HTTP headers, e.g. '{"Authorization": "Bearer ..."}'.
+        body: JSON string of the request body (for POST/PUT/PATCH).
+    """
+    import httpx
+    import json as _json
+
+    try:
+        parsed_headers = {}
+        if headers and headers.strip():
+            try:
+                parsed_headers = _json.loads(headers)
+            except _json.JSONDecodeError:
+                return "Error: headers must be a valid JSON string."
+
+        parsed_body = None
+        if body and body.strip() and method.upper() in ("POST", "PUT", "PATCH"):
+            try:
+                parsed_body = _json.loads(body)
+            except _json.JSONDecodeError:
+                parsed_body = body  # Send as raw string
+
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            response = await client.request(
+                method=method.upper(),
+                url=url,
+                headers=parsed_headers,
+                json=parsed_body if isinstance(parsed_body, dict) else None,
+                content=parsed_body if isinstance(parsed_body, str) else None,
+            )
+
+        # Truncate large responses
+        text = response.text[:2000] if len(response.text) > 2000 else response.text
+        return f"Status: {response.status_code}\nResponse:\n{text}"
+
+    except httpx.TimeoutException:
+        return f"Error: Request to {url} timed out (15s limit)."
+    except Exception as e:
+        return f"Error calling API: {str(e)}"

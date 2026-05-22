@@ -31,7 +31,7 @@ export default function BuilderPage() {
     tool: ToolNode,
     guardrail: GuardrailNode,
     knowledge: KnowledgeNode,
-    output: OutputNode,
+    output_format: OutputNode,
     condition: ConditionNode,
     api: ApiNode,
     memory: MemoryNode,
@@ -141,7 +141,7 @@ export default function BuilderPage() {
               value={agentName}
               onChange={(e) => setAgentName(e.target.value)}
               placeholder="Agent name..."
-              className="bg-transparent border-b border-[var(--border)] focus:border-[var(--accent)] text-sm font-semibold text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none py-1 px-1 w-48 transition-colors"
+              className="bg-[var(--bg-primary)] border border-[var(--border)] focus:border-[var(--accent)] hover:border-[var(--text-tertiary)] rounded-lg text-sm font-semibold text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none py-1.5 px-3 w-48 transition-all"
             />
           </div>
         </div>
@@ -193,6 +193,8 @@ export default function BuilderPage() {
               nodeStrokeWidth={3} 
               className="!rounded-xl !shadow-2xl !border-[var(--border)] !bg-[var(--bg-secondary)]" 
               maskColor="rgba(12, 12, 14, 0.8)"
+              nodeColor={() => '#18181B'}
+              nodeStrokeColor={() => '#2A2A2E'}
             />
           </ReactFlow>
 

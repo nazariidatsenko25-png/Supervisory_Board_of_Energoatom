@@ -72,6 +72,11 @@ class StreamRequest(BaseModel):
     tools: Optional[List[str]] = None
     max_iterations: Optional[int] = 5
     mock: Optional[bool] = False
+    output_format: Optional[OutputFormat] = None
+    knowledge_sources: Optional[List[KnowledgeSource]] = []
+    api_integrations: Optional[List[ApiIntegration]] = []
+    memory_config: Optional[MemoryConfig] = None
+    conditions: Optional[List[ConditionConfig]] = []
 
 
 # ─── AGENT CRUD ───
@@ -197,6 +202,11 @@ async def chat_stream(request: StreamRequest):
         system_prompt = agent.get("system_prompt", "")
         tools_config = agent.get("tools", [])
         max_iterations = agent.get("max_iterations", 5)
+        output_format_data = agent.get("output_format", None)
+        knowledge_sources_data = agent.get("knowledge_sources", [])
+        api_integrations_data = agent.get("api_integrations", [])
+        memory_config_data = agent.get("memory_config", None)
+        conditions_data = agent.get("conditions", [])
         
         # 2. Handle session
         session_id = request.session_id
@@ -212,20 +222,42 @@ async def chat_stream(request: StreamRequest):
             "role": "user",
             "content": request.message
         }).execute()
+
+        # 4. Fetch conversation history when memory is enabled
+        conversation_history = None
+        if memory_config_data and session_id and not is_new_session:
+            try:
+                hist_resp = supabase.table("messages").select("role, content").eq("session_id", session_id).order("created_at", desc=False).limit(20).execute()
+                if hist_resp.data and len(hist_resp.data) > 1:
+                    conversation_history = hist_resp.data[:-1]  # Exclude the message we just inserted
+            except Exception:
+                pass  # Non-critical, continue without history
     else:
         # Direct mode (no DB, from builder preview)
         system_prompt = request.system_prompt or ""
         tools_config = request.tools or []
         max_iterations = request.max_iterations or 5
+        output_format_data = request.output_format.dict() if request.output_format else None
+        knowledge_sources_data = [ks.dict() for ks in (request.knowledge_sources or [])]
+        api_integrations_data = [ai.dict() for ai in (request.api_integrations or [])]
+        memory_config_data = request.memory_config.dict() if request.memory_config else None
+        conditions_data = [c.dict() for c in (request.conditions or [])]
         session_id = None
         is_new_session = False
+        conversation_history = None
     
     # 4. Generate response
     generator = execute_agent(
         system_prompt=system_prompt,
         tools_config=tools_config,
         max_iterations=max_iterations,
-        user_message=request.message
+        user_message=request.message,
+        output_format=output_format_data,
+        knowledge_sources=knowledge_sources_data if knowledge_sources_data else None,
+        api_integrations=api_integrations_data if api_integrations_data else None,
+        memory_config=memory_config_data,
+        conditions=conditions_data if conditions_data else None,
+        conversation_history=conversation_history,
     )
     
     async def final_generator():

@@ -4,7 +4,7 @@ import json
 import asyncio
 from google import genai
 from google.genai import types
-from .tools import web_search, calculator
+from .tools import web_search, calculator, call_api
 
 # ReAct system prompt that forces the model to "think out loud"
 REACT_SYSTEM_PREFIX = """You are an autonomous AI agent that solves tasks step-by-step using the ReAct framework.
@@ -152,10 +152,22 @@ async def call_model_with_retry(chat, message, max_retries=MAX_RETRIES):
     raise last_error
 
 
-async def execute_agent(system_prompt: str, tools_config: list[str], max_iterations: int, user_message: str):
+async def execute_agent(
+    system_prompt: str,
+    tools_config: list[str],
+    max_iterations: int,
+    user_message: str,
+    output_format: dict | None = None,
+    knowledge_sources: list[dict] | None = None,
+    api_integrations: list[dict] | None = None,
+    memory_config: dict | None = None,
+    conditions: list[dict] | None = None,
+    conversation_history: list[dict] | None = None,
+):
     """
     Executes the ReAct loop using Gemini 2.0 Flash.
     Yields SSE events with real model reasoning.
+    All builder block configs are injected into the system prompt.
     """
     try:
         client = get_client()
@@ -170,12 +182,86 @@ async def execute_agent(system_prompt: str, tools_config: list[str], max_iterati
     if system_prompt and system_prompt.strip():
         full_system_prompt += f"\n\n## Additional Instructions from Agent Creator\n{system_prompt}"
 
+    # ─── Output Format ───
+    if output_format and output_format.get('format'):
+        fmt = output_format['format']
+        full_system_prompt += f"\n\n## Output Format\nAlways format your final response as {fmt}."
+        if fmt == 'json' and output_format.get('schema'):
+            full_system_prompt += f"\nFollow this JSON schema:\n```json\n{output_format['schema']}\n```"
+        elif fmt == 'markdown':
+            full_system_prompt += "\nUse proper Markdown with headers, bold, lists where appropriate."
+        elif fmt == 'csv':
+            full_system_prompt += "\nReturn data as CSV with a header row."
+        elif fmt == 'html':
+            full_system_prompt += "\nReturn properly structured HTML."
+
+    # ─── Knowledge Sources ───
+    if knowledge_sources:
+        knowledge_texts = []
+        for ks in knowledge_sources:
+            src_type = ks.get('source_type', 'url')
+            src_value = ks.get('source_value', '')
+            if not src_value:
+                continue
+            if src_type == 'text':
+                knowledge_texts.append(src_value[:4000])
+            elif src_type == 'url':
+                try:
+                    import httpx
+                    resp = httpx.get(src_value, timeout=10, follow_redirects=True)
+                    text = resp.text[:4000]
+                    knowledge_texts.append(f"Content from {src_value}:\n{text}")
+                except Exception:
+                    knowledge_texts.append(f"(Failed to fetch {src_value})")
+            elif src_type == 'file':
+                knowledge_texts.append(f"(File source configured: {src_value} — file reading not yet available)")
+        if knowledge_texts:
+            full_system_prompt += "\n\n## Knowledge Context\nUse the following knowledge as reference when answering:\n\n" + "\n---\n".join(knowledge_texts)
+
+    # ─── API Integrations (inform the model) ───
+    if api_integrations:
+        api_descriptions = []
+        for i, api in enumerate(api_integrations):
+            url = api.get('url', '')
+            method = api.get('method', 'GET')
+            if url:
+                api_descriptions.append(f"- API #{i+1}: {method} {url}")
+        if api_descriptions:
+            full_system_prompt += "\n\n## Available API Integrations\nYou have access to the call_api tool. The user has configured these endpoints:\n" + "\n".join(api_descriptions)
+            full_system_prompt += "\nUse the call_api tool when the user's question requires data from these endpoints."
+
+    # ─── Memory ───
+    if memory_config:
+        mem_type = memory_config.get('memory_type', 'session')
+        ttl = memory_config.get('ttl_minutes', 60)
+        full_system_prompt += f"\n\n## Memory\nYou have {mem_type} memory enabled (TTL: {ttl} minutes). Maintain context across messages and refer back to earlier parts of the conversation when relevant."
+
+    # ─── Conditions ───
+    if conditions:
+        cond_texts = []
+        for c in conditions:
+            expr = c.get('expression', '')
+            if expr:
+                cond_texts.append(f"- If `{expr}` is true, follow the True branch; otherwise follow the False branch.")
+        if cond_texts:
+            full_system_prompt += "\n\n## Conditional Logic\nApply these decision rules:\n" + "\n".join(cond_texts)
+
+    # ─── Unavailable Tools ───
+    unavailable = []
+    for tid in tools_config:
+        if tid in ('code_interpreter', 'image_generation', 'file_reader'):
+            unavailable.append(tid.replace('_', ' ').title())
+    if unavailable:
+        full_system_prompt += f"\n\n## Unavailable Tools\nThe following tools are configured but not yet available: {', '.join(unavailable)}. If the user requests these capabilities, politely inform them that these tools are coming soon."
+
     # Map requested tools to actual functions
     tool_funcs = []
     if "web_search" in tools_config:
         tool_funcs.append(web_search)
     if "calculator" in tools_config:
         tool_funcs.append(calculator)
+    if api_integrations and any(a.get('url') for a in api_integrations):
+        tool_funcs.append(call_api)
         
     config = types.GenerateContentConfig(
         system_instruction=full_system_prompt,
@@ -187,7 +273,20 @@ async def execute_agent(system_prompt: str, tools_config: list[str], max_iterati
     yield f"data: {json.dumps({'type': 'status', 'content': 'Підключення до AI моделі...'})}\n\n"
     
     chat = client.chats.create(model=model, config=config)
-    messages = [user_message]
+
+    # If conversation history exists (memory), prepend it
+    history_prefix = ""
+    if conversation_history:
+        history_lines = []
+        for msg in conversation_history[-10:]:  # Last 10 messages max
+            role = msg.get('role', 'user')
+            content = msg.get('content', '')
+            if content:
+                history_lines.append(f"{role.upper()}: {content[:500]}")
+        if history_lines:
+            history_prefix = "## Previous Conversation\n" + "\n".join(history_lines) + "\n\n## Current Message\n"
+
+    messages = [history_prefix + user_message if history_prefix else user_message]
     
     for i in range(max_iterations):
         yield f"data: {json.dumps({'type': 'status', 'content': f'Крок {i+1}/{max_iterations} — модель аналізує...'})}\n\n"
@@ -225,6 +324,8 @@ async def execute_agent(system_prompt: str, tools_config: list[str], max_iterati
                     result = await web_search(**tool_args)
                 elif tool_name == "calculator":
                     result = await calculator(**tool_args)
+                elif tool_name == "call_api":
+                    result = await call_api(**tool_args)
                 else:
                     result = f"Unknown tool: {tool_name}"
                     

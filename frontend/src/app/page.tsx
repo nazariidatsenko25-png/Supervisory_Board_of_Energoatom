@@ -1,4 +1,5 @@
 import MockChatWidget from '@/components/MockChatWidget';
+import { Puzzle, Brain, Rocket } from 'lucide-react';
 
 export default function Home() {
   return (
@@ -103,9 +104,9 @@ export default function Home() {
 
           <div className="grid md:grid-cols-3 gap-px bg-[var(--border)] rounded-2xl overflow-hidden">
             {/* Feature 1 */}
-            <div className="bg-[var(--bg-primary)] p-8 md:p-10 group hover:bg-[var(--bg-secondary)] transition-colors">
-              <div className="w-10 h-10 rounded-lg bg-[var(--accent-glow)] flex items-center justify-center text-xl mb-6 group-hover:shadow-[0_0_20px_var(--accent-glow)] transition-shadow">
-                🧩
+            <div className="bg-[var(--bg-primary)] p-8 md:p-10 group hover:bg-[var(--bg-secondary)] transition-all duration-300 hover:-translate-y-1">
+              <div className="w-10 h-10 rounded-lg bg-[var(--accent-glow)] flex items-center justify-center mb-6 group-hover:shadow-[0_0_20px_var(--accent-glow)] transition-all">
+                <Puzzle className="w-5 h-5 text-[var(--accent)]" />
               </div>
               <h3 className="text-xl font-semibold mb-3">Visual Builder</h3>
               <p className="text-[var(--text-secondary)] leading-relaxed text-sm">
@@ -114,9 +115,9 @@ export default function Home() {
             </div>
 
             {/* Feature 2 */}
-            <div className="bg-[var(--bg-primary)] p-8 md:p-10 group hover:bg-[var(--bg-secondary)] transition-colors">
-              <div className="w-10 h-10 rounded-lg bg-[var(--accent-glow)] flex items-center justify-center text-xl mb-6 group-hover:shadow-[0_0_20px_var(--accent-glow)] transition-shadow">
-                🧠
+            <div className="bg-[var(--bg-primary)] p-8 md:p-10 group hover:bg-[var(--bg-secondary)] transition-all duration-300 hover:-translate-y-1">
+              <div className="w-10 h-10 rounded-lg bg-[var(--accent-glow)] flex items-center justify-center mb-6 group-hover:shadow-[0_0_20px_var(--accent-glow)] transition-all">
+                <Brain className="w-5 h-5 text-[var(--accent)]" />
               </div>
               <h3 className="text-xl font-semibold mb-3">Live Thought Tracking</h3>
               <p className="text-[var(--text-secondary)] leading-relaxed text-sm">
@@ -125,9 +126,9 @@ export default function Home() {
             </div>
 
             {/* Feature 3 */}
-            <div className="bg-[var(--bg-primary)] p-8 md:p-10 group hover:bg-[var(--bg-secondary)] transition-colors">
-              <div className="w-10 h-10 rounded-lg bg-[var(--accent-glow)] flex items-center justify-center text-xl mb-6 group-hover:shadow-[0_0_20px_var(--accent-glow)] transition-shadow">
-                🚀
+            <div className="bg-[var(--bg-primary)] p-8 md:p-10 group hover:bg-[var(--bg-secondary)] transition-all duration-300 hover:-translate-y-1">
+              <div className="w-10 h-10 rounded-lg bg-[var(--accent-glow)] flex items-center justify-center mb-6 group-hover:shadow-[0_0_20px_var(--accent-glow)] transition-all">
+                <Rocket className="w-5 h-5 text-[var(--accent)]" />
               </div>
               <h3 className="text-xl font-semibold mb-3">Deploy Anywhere</h3>
               <p className="text-[var(--text-secondary)] leading-relaxed text-sm">

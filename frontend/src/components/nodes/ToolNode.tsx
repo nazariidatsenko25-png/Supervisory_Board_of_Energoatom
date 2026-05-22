@@ -1,6 +1,7 @@
 import { Handle, Position } from 'reactflow';
 import { useStore } from '@/store/agentStore';
 import { NodeAddMenu } from '@/components/NodeAddMenu';
+import { getLucideIcon } from '@/components/Icons';
 
 export function ToolNode({ id, data }: { id: string; data: any }) {
   const updateNodeData = useStore((state) => state.updateNodeData);
@@ -8,7 +9,7 @@ export function ToolNode({ id, data }: { id: string; data: any }) {
 
   return (
     <div
-      className="relative bg-[var(--bg-card)] rounded-xl border overflow-visible min-w-[240px] transition-all"
+      className="relative bg-[var(--bg-card)] shadow-lg rounded-xl border overflow-visible min-w-[240px] transition-all group/node"
       style={{
         borderColor: isEnabled ? 'var(--node-tool)' : 'var(--border)',
         boxShadow: isEnabled ? '0 0 24px var(--node-tool-glow)' : 'none',
@@ -17,10 +18,11 @@ export function ToolNode({ id, data }: { id: string; data: any }) {
       <Handle
         type="target"
         position={Position.Top}
-        className="w-3 h-3 !border-2 !border-[var(--bg-card)] rounded-full -translate-y-1.5"
-        style={{ background: 'var(--node-tool)' }}
-      />
-      <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between">
+        className="!w-1 !h-1 !bg-transparent !border-none z-10 flex items-center justify-center group/handle !top-0 !-translate-x-1/2 !-translate-y-1/2"
+      >
+        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-[var(--bg-primary)] transition-all duration-200 group-hover/handle:w-4 group-hover/handle:h-4 group-hover/handle:shadow-[0_0_12px_var(--node-tool-glow)]" style={{ background: 'var(--node-tool)' }} />
+      </Handle>
+      <div className="px-4 py-3 border-b-0 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div
             className="w-8 h-8 rounded-lg flex items-center justify-center text-base transition-colors"
@@ -28,7 +30,7 @@ export function ToolNode({ id, data }: { id: string; data: any }) {
               background: isEnabled ? 'var(--node-tool-glow)' : 'var(--bg-elevated)',
             }}
           >
-            {data.tool_icon || '🛠️'}
+            {getLucideIcon(data.tool_icon || 'Wrench')}
           </div>
           <div>
             <span className="text-sm font-semibold text-[var(--text-primary)] block leading-tight">
@@ -47,7 +49,7 @@ export function ToolNode({ id, data }: { id: string; data: any }) {
             }}
           >
             <div
-              className="w-3.5 h-3.5 rounded-full bg-white absolute top-[3px] transition-all"
+              className="w-3.5 h-3.5 rounded-full bg-white shadow-sm absolute top-[3px] transition-all"
               style={{ left: isEnabled ? '18px' : '3px' }}
             />
           </div>
@@ -62,9 +64,10 @@ export function ToolNode({ id, data }: { id: string; data: any }) {
       <Handle
         type="source"
         position={Position.Bottom}
-        className="w-3 h-3 !border-2 !border-[var(--bg-card)] rounded-full translate-y-1.5"
-        style={{ background: 'var(--node-tool)' }}
-      />
+        className="!w-1 !h-1 !bg-transparent !border-none z-10 flex items-center justify-center group/handle !bottom-0 !-translate-x-1/2 !translate-y-1/2"
+      >
+        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-[var(--bg-primary)] transition-all duration-200 group-hover/handle:w-4 group-hover/handle:h-4 group-hover/handle:shadow-[0_0_12px_var(--node-tool-glow)]" style={{ background: 'var(--node-tool)' }} />
+      </Handle>
       <NodeAddMenu sourceNodeId={id} />
     </div>
   );

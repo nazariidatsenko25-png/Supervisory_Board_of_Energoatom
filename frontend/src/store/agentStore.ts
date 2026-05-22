@@ -122,7 +122,7 @@ export const NODE_CATALOG: NodeCatalogItem[] = [
     defaultData: { expression: '', true_label: 'True', false_label: 'False' },
   },
   {
-    type: 'output',
+    type: 'output_format',
     label: 'Output Format',
     icon: '📤',
     description: 'Формат відповіді',
@@ -297,7 +297,7 @@ export const useStore = create<RFState>((set, get) => ({
             });
           }
           break;
-        case 'output':
+        case 'output_format':
           output_format = {
             format: node.data?.format || 'markdown',
             schema: node.data?.schema || '',

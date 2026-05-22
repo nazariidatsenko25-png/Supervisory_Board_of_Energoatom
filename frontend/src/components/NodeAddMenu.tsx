@@ -61,7 +61,7 @@ export function NodeAddMenu({
       tool: 'var(--node-tool)',
       guardrail: 'var(--node-guardrail)',
       knowledge: 'var(--node-knowledge)',
-      output: 'var(--node-output)',
+      output_format: 'var(--node-output)',
       condition: 'var(--node-condition)',
       api: 'var(--node-api)',
       memory: 'var(--node-memory)',
@@ -75,7 +75,7 @@ export function NodeAddMenu({
       tool: 'var(--node-tool-glow)',
       guardrail: 'var(--node-guardrail-glow)',
       knowledge: 'var(--node-knowledge-glow)',
-      output: 'var(--node-output-glow)',
+      output_format: 'var(--node-output-glow)',
       condition: 'var(--node-condition-glow)',
       api: 'var(--node-api-glow)',
       memory: 'var(--node-memory-glow)',
@@ -85,15 +85,21 @@ export function NodeAddMenu({
 
   // Position styles for the button and dropdown
   const isBottom = position === 'bottom';
-  const btnPositionClass = isBottom
-    ? 'left-1/2 -translate-x-1/2 -bottom-10'
-    : 'top-1/2 -translate-y-1/2 -right-10';
-  const menuPositionStyle = isBottom
+  const btnContainerStyle: React.CSSProperties = isBottom
+    ? { top: 'calc(100% + 24px)', left: '50%', transform: 'translateX(-50%)' }
+    : { top: '50%', left: 'calc(100% + 24px)', transform: 'translateY(-50%)' };
+  const menuPositionStyle: React.CSSProperties = isBottom
     ? { top: '100%', left: '50%', transform: 'translateX(-50%)', marginTop: '8px' }
     : { top: '0', left: '100%', marginLeft: '8px' };
 
   return (
-    <div ref={menuRef} className={`absolute ${btnPositionClass} z-40`}>
+    <div ref={menuRef} className="absolute z-40 flex flex-col items-center" style={btnContainerStyle}>
+      {/* Decorative connection line */}
+      {isBottom && (
+        <div className="w-[1px] h-6 bg-[var(--border)] absolute -top-6 left-1/2 -translate-x-1/2 pointer-events-none transition-colors"
+             style={{ backgroundColor: isOpen ? 'var(--accent)' : 'var(--border)' }} />
+      )}
+      
       {/* + Button */}
       <button
         onClick={(e) => {
