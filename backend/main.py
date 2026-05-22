@@ -32,11 +32,37 @@ else:
     supabase = None
     print("Warning: SUPABASE_URL or SUPABASE_KEY is missing in .env")
 
+class KnowledgeSource(BaseModel):
+    source_type: str = "url"
+    source_value: str = ""
+
+class OutputFormat(BaseModel):
+    format: str = "markdown"
+    output_schema: str = ""
+
+class ApiIntegration(BaseModel):
+    method: str = "GET"
+    url: str = ""
+    headers: str = ""
+    body: str = ""
+
+class MemoryConfig(BaseModel):
+    memory_type: str = "session"
+    ttl_minutes: int = 60
+
+class ConditionConfig(BaseModel):
+    expression: str = ""
+
 class AgentConfig(BaseModel):
     name: str = "Unnamed Agent"
     system_prompt: str
     tools: List[str] = []
     max_iterations: int = 5
+    knowledge_sources: Optional[List[KnowledgeSource]] = []
+    output_format: Optional[OutputFormat] = None
+    api_integrations: Optional[List[ApiIntegration]] = []
+    memory_config: Optional[MemoryConfig] = None
+    conditions: Optional[List[ConditionConfig]] = []
 
 class StreamRequest(BaseModel):
     agent_id: Optional[str] = None
@@ -59,7 +85,12 @@ async def create_agent(config: AgentConfig):
         "name": config.name,
         "system_prompt": config.system_prompt,
         "tools": config.tools,
-        "max_iterations": config.max_iterations
+        "max_iterations": config.max_iterations,
+        "knowledge_sources": [ks.dict() for ks in (config.knowledge_sources or [])],
+        "output_format": config.output_format.dict() if config.output_format else None,
+        "api_integrations": [ai.dict() for ai in (config.api_integrations or [])],
+        "memory_config": config.memory_config.dict() if config.memory_config else None,
+        "conditions": [c.dict() for c in (config.conditions or [])],
     }).execute()
     
     if not response.data:

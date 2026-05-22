@@ -30,6 +30,24 @@
   --warning: #FBBF24;
   --error: #F87171;
 
+  /* Node-type accent colors */
+  --node-prompt: #00E5C7;
+  --node-prompt-glow: rgba(0, 229, 199, 0.15);
+  --node-tool: #00E5C7;
+  --node-tool-glow: rgba(0, 229, 199, 0.15);
+  --node-guardrail: #FBBF24;
+  --node-guardrail-glow: rgba(251, 191, 36, 0.15);
+  --node-knowledge: #60A5FA;
+  --node-knowledge-glow: rgba(96, 165, 250, 0.15);
+  --node-output: #34D399;
+  --node-output-glow: rgba(52, 211, 153, 0.15);
+  --node-condition: #A78BFA;
+  --node-condition-glow: rgba(167, 139, 250, 0.15);
+  --node-api: #FB923C;
+  --node-api-glow: rgba(251, 146, 60, 0.15);
+  --node-memory: #F472B6;
+  --node-memory-glow: rgba(244, 114, 182, 0.15);
+
   /* Typography */
   --font-display: 'Instrument Serif', Georgia, serif;
   --font-body: 'DM Sans', system-ui, sans-serif;
