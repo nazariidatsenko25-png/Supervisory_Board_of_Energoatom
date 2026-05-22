@@ -1,10 +1,6 @@
-# 📚 Agentic Studio: Максимально деталізований посібник для розробників та AI-асистентів
+# 📚 Agentic Studio: Посібник для команди та AI-асистентів
 
-Цей документ створено для повного занурення в проєкт **Agentic Studio** нових розробників та їхніх AI-асистентів. Він містить детальну інформацію про архітектуру, API-контракти та покрокові інструкції з прикладами коду для кожного потоку розробки.
-
-Усі використовувані інструменти (Gemini 2.0 Flash, Brave Search, Supabase, Vercel, Render) мають **повністю безкоштовні тарифи (Free Tiers)**, тому ніяких платіжних карток підключати не потрібно.
-
----
+Цей документ створено для повного занурення команди в проєкт **Agentic Studio**. Він містить детальну інформацію про архітектуру, API-контракти та завдання для паралельної розробки.
 
 ## 0. Підготовка до роботи (Quick Start)
 **УВАГА:** Оскільки API-ключі не зберігаються в репозиторії (захищено через `.gitignore`), кожен розробник повинен налаштувати їх локально перед початком роботи:
@@ -14,150 +10,90 @@
 
 ---
 
-## 🏗 1. Архітера Проєкту
-- **Фронтенд (Папка `frontend/`):** 
-  - Фреймворк: Next.js (App Router).
-  - Стан: Zustand (управління графом `frontend/src/store/agentStore.ts`).
-  - Візуалізація: React Flow (побудова логіки агента з Node-блоків).
-  - Стилізація: Tailwind CSS.
-- **Бекенд (Папка `backend/`):** 
-  - Фреймворк: FastAPI (Python 3.10+).
-  - LLM SDK: `google-genai` (офіційний SDK для Gemini 2.0 Flash).
-  - HTTP-клієнт: `httpx` (для запитів до Brave Search API).
-- **Оркестрація:** Замість LangChain ми використовуємо власний легкий цикл `ReAct`, який дозволяє перехоплювати інструменти та стрімити події в реальному часі через Server-Sent Events (SSE).
+## 1. Архітектура Проєкту
+- **Фронтенд (`frontend/`):** Next.js (App Router), Zustand, React Flow, Tailwind CSS.
+- **Бекенд (`backend/`):** FastAPI (Python), `google-genai` (SDK для Gemini 2.0 Flash), `httpx`.
+- **Оркестрація:** Кастомний цикл `ReAct`, який дозволяє стрімити події в реальному часі через Server-Sent Events (SSE). 
 
-### 🔄 Життєвий цикл повідомлення (Як працює SSE)
-Коли користувач відправляє повідомлення у віджеті, фронтенд зчитує `ReadableStream`.
-Формат потоку від бекенду:
-1. `data: {"type": "thought", "content": "Звертаюся до моделі..."}\n\n`
-2. `data: {"type": "action", "tool": "web_search", "args": {"query": "..."}}\n\n`
-3. `data: {"type": "observation", "content": "Результати пошуку..."}\n\n`
-4. `data: {"type": "message", "content": "Фінальна відповідь користувачу"}\n\n`
-
-**ВАЖЛИВО:** Цей формат не можна ламати, оскільки `MockChatWidget.tsx` містить складну логіку парсингу TCP-чанків, орієнтовану саме на розділювач `\n\n` та префікс `data: `.
+Формат потоку від бекенду (НЕ ЛАМАТИ ПРИ РОЗРОБЦІ):
+`data: {"type": "thought|action|observation|message", "content": "..."}\n\n`
 
 ---
 
-## 🤝 2. Зафіксований API-Контракт
-
-Для уникнення конфліктів команди розробляють свої частини, спираючись виключно на цей контракт.
+## 2. Зафіксований API-Контракт
+Для уникнення конфліктів розробляйте свої частини, спираючись виключно на цей контракт.
 
 ### 2.1. Створення Агента (`POST /api/agents`)
-Викликається фронтендом при натисканні "Save & Deploy" у конструкторі.
-**Request Body (JSON):**
-```json
-{
-  "system_prompt": "Ви - аналітик...",
-  "tools": ["web_search"],
-  "max_iterations": 5
-}
-```
-**Response (200 OK):**
-```json
-{
-  "agent_id": "123e4567-e89b-12d3-a456-426614174000"
-}
-```
+**Request (JSON):** `{"system_prompt": "...", "tools": ["web_search"], "max_iterations": 5}`
+**Response (200 OK):** `{"agent_id": "123e4567-e89b-12d3-a456-426614174000"}`
 
 ### 2.2. Потік Чату (`POST /api/chat/stream`)
-Викликається віджетом під час розмови.
-**Request Body (JSON):**
-```json
-{
-  "agent_id": "123e4567-e89b-12d3-a456-426614174000",
-  "message": "Яка погода?",
-  "session_id": "999e4567-e89b-12d3-a456-426614174000" // Опціонально (передається якщо чат вже триває)
-}
-```
-**Response:** `text/event-stream` (потік повідомлень). Якщо `session_id` не передано в запиті, бекенд повинен надіслати першим пакетом:
-`data: {"type": "session_created", "session_id": "новий_uuid"}\n\n`
+**Request (JSON):** `{"agent_id": "123e4567-e89b-12d3-a456-426614174000", "message": "Привіт", "session_id": "uuid-якщо-є"}`
+**Response:** `text/event-stream` (потік повідомлень SSE).
 
 ---
 
-## 🛠 3. Гілки та Завдання (Stream Assignments)
+## 🛠 3. Розподіл завдань (1 Потік = 1 Розробник)
 
-Кожен розробник (або AI-асистент) повинен перемкнутися на свою гілку (наприклад, `git checkout feature/supabase-backend`) і працювати **тільки** у вказаних папках.
+Проєкт поділено на 3 незалежні потоки. **Над кожним потоком працює рівно ОДНА людина.** Ніхто не перетинається у файлах. Кожен бере свою гілку і виконує своє комплексне завдання від початку до кінця.
 
 ---
 
-### 🔴 ПОТІК 1: База Даних Supabase та Бекенд
+### 🔴 ПОТІК 1: Бекенд-інженер (Робота з БД та логікою)
+**Відповідальний:** 1 людина
 **Гілка:** `feature/supabase-backend`
-**Директорія:** `backend/`
-**Вимоги:**
-1. **Інсталяція:** Додайте `supabase-py==2.3.4` у `backend/requirements.txt`.
-2. **Схема БД (Виконати в Supabase SQL Editor):**
-   ```sql
-   CREATE TABLE agents (
-       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-       system_prompt TEXT NOT NULL,
-       tools JSONB DEFAULT '[]'::jsonb,
-       max_iterations INT DEFAULT 5,
-       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-   );
+**Зона відповідальності:** Папка `backend/`
 
-   CREATE TABLE sessions (
-       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-       agent_id UUID REFERENCES agents(id),
-       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-   );
+**Твоє завдання:**
+Тобі потрібно забезпечити збереження конфігурацій агентів та історії їхніх чатів у базу даних Supabase. Для цього додай `supabase-py` у залежності та створи в БД три таблиці: `agents` (для збереження промптів та інструментів), `sessions` (для сесій чату) та `messages` (для історії діалогу). 
+Після цього напиши новий роут `POST /api/agents`, який буде приймати налаштування від фронтенду, зберігати їх у БД і повертати згенерований `agent_id`. Наостанок, ти маєш переписати існуючий роут `POST /api/chat/stream`: тепер він не повинен приймати промпт у тілі запиту, а має приймати `agent_id`, самостійно витягувати налаштування з БД, зберігати повідомлення користувача в таблицю `messages`, викликати ШІ і зберігати фінальну відповідь моделі назад у БД.
 
-   CREATE TABLE messages (
-       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-       session_id UUID REFERENCES sessions(id),
-       role VARCHAR(50) NOT NULL,
-       content TEXT,
-       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-   );
-   ```
-3. **Реалізація `/api/agents` у `main.py`:**
-   Зчитати `SUPABASE_URL` та `SUPABASE_KEY` з `.env`. Ініціалізувати клієнт `supabase.create_client()`. Реалізувати збереження `ChatRequest` (старого) як конфігурації у БД.
-4. **Оновлення `/api/chat/stream`:**
-   - Змінити `ChatRequest` на `StreamRequest` (має поля `agent_id`, `message`, `session_id`).
-   - По `agent_id` дістати з БД `system_prompt` і `tools`.
-   - Зберегти `message` від юзера в таблицю `messages` з `role='user'`.
-   - Викликати `execute_agent()`.
-   - По завершенню генерації (після `type: message`) зберегти фінальну відповідь моделі в БД.
+<details>
+<summary>Натисни сюди, щоб скопіювати SQL схему для Supabase</summary>
+
+```sql
+CREATE TABLE agents (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    system_prompt TEXT NOT NULL,
+    tools JSONB DEFAULT '[]'::jsonb,
+    max_iterations INT DEFAULT 5,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE sessions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    agent_id UUID REFERENCES agents(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE messages (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    session_id UUID REFERENCES sessions(id),
+    role VARCHAR(50) NOT NULL,
+    content TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
+</details>
 
 ---
 
-### 🟢 ПОТІК 2: Віджет-Сніпет (Embed Script) та Iframe
+### 🟢 ПОТІК 2: Інженер Інтеграції (Embed Script & Iframe)
+**Відповідальний:** 1 людина
 **Гілка:** `feature/embed-widget`
-**Директорія:** `frontend/public/` та `frontend/src/app/widget/`
-**Вимоги:**
-1. **Створення Vanilla JS Сніпета:** Написати `frontend/public/embed.js`. Логіка:
-   - Знайти скрипт, через який він завантажився: `const scriptTag = document.currentScript;`
-   - Витягнути `data-agent`: `const agentId = scriptTag.getAttribute('data-agent');`
-   - Створити контейнер `<div>` (fixed, bottom-0, right-0, z-index: 999999).
-   - Всередині контейнера створити `<iframe>` зі стилями (ширина 380px, висота 600px, border: none, border-radius).
-   - Встановити `iframe.src = 'http://localhost:3000/widget/' + agentId;`
-   - Додати плаваючу кнопку (круглий `<button>`), яка робить iframe видимим/невидимим (`display: none` або `opacity: 0`).
-2. **Створення ізольованого роута в Next.js:** 
-   - Створити файл `frontend/src/app/widget/[agent_id]/page.tsx`.
-   - На сторінці відрендерити **тільки** `MockChatWidget` (передавши `agent_id` як пропс або через Context). На цій сторінці не повинно бути відступів браузера (`margin: 0`), хедерів сайту чи футерів, оскільки вона житиме всередині iframe.
-3. **Доробка `MockChatWidget.tsx`:** Він повинен приймати `agentId` та прибирати власну плаваючу кнопку, залишаючи лише саме вікно чату (оскільки кнопка відкриття тепер управляється клієнтським `embed.js`).
+**Зона відповідальності:** `frontend/public/embed.js` та `frontend/src/app/widget/`
+
+**Твоє завдання:**
+Твоя мета — зробити так, щоб створеного агента можна було вставити на будь-який сайт у світі. Напиши чистий Vanilla JS скрипт (`frontend/public/embed.js`), який клієнти будуть додавати на свої сайти. Цей скрипт має програмно створювати плаваючу кнопку (FAB) у кутку екрану та невидимий `<iframe>`, що завантажує наш віджет за посиланням `http://localhost:3000/widget/[agent_id]` (ID потрібно діставати з атрибута `data-agent` самого скрипта). 
+Щоб iframe мав що завантажувати, створи окрему порожню сторінку в Next.js (`frontend/src/app/widget/[agent_id]/page.tsx`), на якій не буде нічого, окрім компонента `MockChatWidget`. Цей компонент має займати 100% ширини і висоти (без зовнішніх відступів чи меню), щоб ідеально вписатися у вікно iframe на клієнтському сайті.
 
 ---
 
-### 🔵 ПОТІК 3: UI Конструктора та Збереження Агента
+### 🔵 ПОТІК 3: Frontend-інженер (UI/UX Конструктора)
+**Відповідальний:** 1 людина
 **Гілка:** `feature/builder-ui`
-**Директорія:** `frontend/src/app/builder/` та `frontend/src/app/page.tsx`
-**Вимоги:**
-1. **Кнопка "Save & Deploy":** 
-   - У `frontend/src/app/builder/page.tsx` додати кнопку, яка збирає дані з графа: `const config = getAgentConfig();`
-   - Зробити асинхронний запит: `fetch('http://localhost:8000/api/agents', { method: 'POST', body: JSON.stringify(config) })`.
-2. **Модальне вікно успіху:**
-   - Коли бекенд повертає `agent_id`, показати діалогове вікно.
-   - Вікно має містити красивий блок коду з кнопкою "Copy to Clipboard":
-     ```html
-     <!-- Paste this script before the closing </body> tag -->
-     <script src="http://localhost:3000/embed.js" data-agent="ТУТ_UUID" defer></script>
-     ```
-3. **Landing Page:** 
-   - Оновити `frontend/src/app/page.tsx`. Зробити красивий лендінг.
-   - Заголовок: "Agentic Studio — Будуй AI Агентів Візуально".
-   - Опис: "Створюй автономних агентів, налаштовуй інструменти (Web Search) і вбудовуй їх на свій сайт за 1 хвилину."
-   - Кнопка: "Почати створення (Start Building)", яка веде на `/builder`.
-4. **UX Покращення:** У `agentStore.ts` та нодах додати стилізацію (Tailwind), щоб конструктор виглядав преміально (shadows, gradients, border-radius).
+**Зона відповідальності:** `frontend/src/app/builder/` та `frontend/src/app/page.tsx`
 
----
-**Ключове правило для всіх AI-асистентів:** Ваше завдання — писати чистий, модульний код. Кожна гілка — це незалежний функціонал, тому **не намагайтеся редагувати файли з іншого потоку**. Після виконання потоку зміни будуть злиті (merged) у `main`.
+**Твоє завдання:**
+Твоя мета — завершити візуальний інтерфейс платформи та зв'язати його з бекендом. Зміни кнопку у візуальному конструкторі на "Save & Deploy", яка буде брати JSON-конфігурацію з Zustand-сховища і відправляти POST-запит на `http://localhost:8000/api/agents`. Після того, як бекенд поверне у відповідь `agent_id`, покажи користувачу гарне модальне вікно (Tailwind UI) з готовим HTML-кодом для копіювання (`<script src="http://localhost:3000/embed.js" data-agent="отриманий-uuid"></script>`). 
+Також твоє завдання — створити презентабельний Landing Page на головній сторінці сайту з описом платформи "Agentic Studio" та кнопкою "Почати будівництво", а також зробити загальний "полішинг" інтерфейсу (тіні, градієнти, заокруглення) для фінальної презентації на хакатоні.
