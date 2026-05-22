@@ -27,7 +27,7 @@ export function ToolNode({ id, data }: { id: string, data: any }) {
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-lg ${activeTools.includes('web_search') ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
               🔍
             </div>
-            <span className={`text-sm font-semibold ${activeTools.includes('web_search') ? 'text-slate-800' : 'text-slate-600'}`}>Web Search (Brave)</span>
+            <span className={`text-sm font-semibold ${activeTools.includes('web_search') ? 'text-slate-800' : 'text-slate-600'}`}>Web Search (Tavily)</span>
           </div>
           <input 
             type="checkbox" 
@@ -37,15 +37,20 @@ export function ToolNode({ id, data }: { id: string, data: any }) {
           />
         </label>
         
-        {/* Placeholder for future tools */}
-        <label className="flex items-center justify-between p-3 border border-slate-100 rounded-xl cursor-not-allowed opacity-60 bg-slate-50">
+        {/* Calculator tool */}
+        <label className="flex items-center justify-between p-3 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors group">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center text-lg text-slate-400">
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-lg ${activeTools.includes('calculator') ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
               🧮
             </div>
-            <span className="text-sm font-medium text-slate-500">Calculator</span>
+            <span className={`text-sm font-semibold ${activeTools.includes('calculator') ? 'text-slate-800' : 'text-slate-600'}`}>Calculator</span>
           </div>
-          <span className="text-xs bg-slate-200 text-slate-500 px-2 py-1 rounded-md font-medium">Soon</span>
+          <input 
+            type="checkbox" 
+            className="w-5 h-5 text-emerald-500 rounded-md border-slate-300 focus:ring-emerald-500 cursor-pointer"
+            checked={activeTools.includes('calculator')}
+            onChange={() => handleToggle('calculator')}
+          />
         </label>
       </div>
       <Handle type="source" position={Position.Bottom} className="w-4 h-4 bg-emerald-500 border-2 border-white rounded-full shadow-md translate-y-2" />

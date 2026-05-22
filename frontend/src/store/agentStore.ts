@@ -16,7 +16,7 @@ import {
 export type AgentConfig = {
   system_prompt: string;
   tools: string[];
-  max_iterations: int;
+  max_iterations: number;
 };
 
 type RFState = {

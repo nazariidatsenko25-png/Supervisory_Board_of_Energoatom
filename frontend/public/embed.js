@@ -16,9 +16,13 @@
         return;
     }
 
+    // Derive base URL from script src (works on any host, not just localhost)
+    const scriptSrc = currentScript.getAttribute('src');
+    const baseUrl = scriptSrc ? new URL(scriptSrc).origin : 'http://localhost:3000';
+
     // Create the iframe
     const iframe = document.createElement('iframe');
-    iframe.src = `http://localhost:3000/widget/${agentId}`;
+    iframe.src = `${baseUrl}/widget/${agentId}`;
     iframe.style.cssText = 'position: fixed; bottom: 90px; right: 24px; width: 380px; height: 600px; max-height: 85vh; border: none; border-radius: 16px; display: none; z-index: 999999; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); background: transparent; overflow: hidden;';
     
     // Create the toggle button

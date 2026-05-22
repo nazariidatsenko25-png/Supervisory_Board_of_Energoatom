@@ -3,7 +3,7 @@ import json
 import asyncio
 from google import genai
 from google.genai import types
-from .tools import web_search
+from .tools import web_search, calculator
 
 def get_client():
     api_key = os.getenv("GEMINI_API_KEY")
@@ -28,6 +28,8 @@ async def execute_agent(system_prompt: str, tools_config: list[str], max_iterati
     tool_funcs = []
     if "web_search" in tools_config:
         tool_funcs.append(web_search)
+    if "calculator" in tools_config:
+        tool_funcs.append(calculator)
         
     config = types.GenerateContentConfig(
         system_instruction=system_prompt,
@@ -46,8 +48,19 @@ async def execute_agent(system_prompt: str, tools_config: list[str], max_iterati
             message_to_send = messages.pop() if messages else ""
             response = chat.send_message(message_to_send)
         except Exception as e:
-            yield f"data: {json.dumps({'type': 'message', 'content': f'Помилка API: {str(e)}'})}\n\n"
-            break
+            error_msg = str(e)
+            # Retry once on rate limit (429) with backoff
+            if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
+                yield f"data: {json.dumps({'type': 'thought', 'content': 'API ліміт. Повторюю через 3 секунди...'})}\n\n"
+                await asyncio.sleep(3)
+                try:
+                    response = chat.send_message(message_to_send)
+                except Exception as retry_e:
+                    yield f"data: {json.dumps({'type': 'message', 'content': f'Помилка API: {str(retry_e)}'})}\n\n"
+                    break
+            else:
+                yield f"data: {json.dumps({'type': 'message', 'content': f'Помилка API: {error_msg}'})}\n\n"
+                break
             
         if response.function_calls:
             for function_call in response.function_calls:
@@ -58,8 +71,9 @@ async def execute_agent(system_prompt: str, tools_config: list[str], max_iterati
                 
                 # Execute tool
                 if tool_name == "web_search":
-                    # Run async tool safely
                     result = await web_search(**tool_args)
+                elif tool_name == "calculator":
+                    result = await calculator(**tool_args)
                 else:
                     result = f"Unknown tool: {tool_name}"
                     
