@@ -5,22 +5,21 @@ export function PromptNode({ id, data }: { id: string, data: any }) {
   const updateNodeData = useStore((state) => state.updateNodeData);
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl border-0 overflow-hidden min-w-[320px] transition-all hover:shadow-2xl">
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3 flex items-center justify-between">
-        <div className="font-bold text-white flex items-center gap-2">
-          <span>📝</span> Системний Промпт
-        </div>
+    <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] overflow-hidden min-w-[320px] transition-all hover:border-[var(--accent)] hover:shadow-[0_0_24px_var(--accent-glow)]">
+      <div className="px-4 py-3 border-b border-[var(--border)] flex items-center gap-2">
+        <span className="text-base">📝</span>
+        <span className="text-sm font-semibold text-[var(--text-primary)]">Системний Промпт</span>
       </div>
-      <div className="p-5">
-        <label className="block text-sm font-medium text-slate-600 mb-2">Інструкції для агента:</label>
+      <div className="p-4">
+        <label className="block text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider mb-2">Інструкції для агента</label>
         <textarea
-          className="w-full p-3 border border-slate-200 rounded-xl text-sm h-28 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none shadow-sm transition-shadow bg-slate-50 focus:bg-white"
+          className="w-full p-3 bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg text-sm h-28 focus:ring-1 focus:ring-[var(--accent)] focus:border-[var(--accent)] outline-none resize-none transition-all text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)]"
           placeholder="Ти корисний асистент..."
           value={data.system_prompt || ''}
           onChange={(e) => updateNodeData(id, { system_prompt: e.target.value })}
         />
       </div>
-      <Handle type="source" position={Position.Bottom} className="w-4 h-4 bg-indigo-500 border-2 border-white rounded-full shadow-md translate-y-2" />
+      <Handle type="source" position={Position.Bottom} className="w-3 h-3 !bg-[var(--accent)] !border-2 !border-[var(--bg-card)] rounded-full translate-y-1.5" />
     </div>
   );
 }

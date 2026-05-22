@@ -2,112 +2,173 @@ import MockChatWidget from '@/components/MockChatWidget';
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-indigo-200">
+    <main className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-indigo-950 via-purple-900 to-slate-900 text-white pt-24 pb-32">
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
-        <div className="max-w-6xl mx-auto px-6 relative z-10 text-center mt-12">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 backdrop-blur-sm mb-8">
-            <span className="flex h-2 w-2 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-            <span className="text-sm font-medium text-indigo-100">Agentic Studio is Live</span>
+      <section className="relative overflow-hidden min-h-[90vh] flex items-center noise-overlay">
+        {/* Gradient orb background */}
+        <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full bg-[var(--accent)] opacity-[0.04] blur-[120px]"></div>
+        <div className="absolute bottom-[-10%] left-[-5%] w-[400px] h-[400px] rounded-full bg-[var(--accent)] opacity-[0.03] blur-[100px]"></div>
+
+        <div className="max-w-6xl mx-auto px-6 relative z-10 py-24">
+          {/* Status badge */}
+          <div className="animate-fade-in-up">
+            <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full border border-[var(--border)] bg-[var(--bg-secondary)] mb-10">
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--accent)] opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--accent)]"></span>
+              </span>
+              <span className="text-xs font-mono-brand tracking-wider uppercase text-[var(--text-secondary)]">Platform Active</span>
+            </div>
           </div>
-          <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-8 text-white drop-shadow-lg">
-            Create Autonomous AI Agents <br className="hidden md:block"/> in <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">60 Seconds</span>
+
+          {/* Headline */}
+          <h1 className="animate-fade-in-up delay-1 font-display text-5xl sm:text-6xl md:text-8xl leading-[0.95] tracking-tight mb-8 max-w-4xl">
+            Build Autonomous{' '}
+            <span className="italic text-[var(--accent)]">AI Agents</span>
+            <br />Without Code
           </h1>
-          <p className="text-xl md:text-2xl text-indigo-200 mb-12 max-w-3xl mx-auto leading-relaxed">
-            Stop hardcoding bots. Visually design agents, equip them with tools, and deploy a self-thinking AI widget to any website with a single line of code.
+
+          {/* Subhead */}
+          <p className="animate-fade-in-up delay-2 text-lg md:text-xl text-[var(--text-secondary)] mb-12 max-w-2xl leading-relaxed">
+            Визуально проєктуйте агентів, оснащуйте інструментами та деплойте 
+            чат-віджет на будь-який сайт одним рядком JS.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="/builder" className="px-8 py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold rounded-xl text-lg transition-all shadow-[0_0_40px_rgba(16,185,129,0.4)] hover:shadow-[0_0_60px_rgba(16,185,129,0.6)] transform hover:-translate-y-1">
-              Build Agent Now &rarr;
+
+          {/* CTAs */}
+          <div className="animate-fade-in-up delay-3 flex flex-col sm:flex-row gap-4">
+            <a 
+              href="/builder" 
+              className="group inline-flex items-center gap-2 px-8 py-4 bg-[var(--accent)] text-[var(--text-inverse)] font-semibold rounded-xl text-lg transition-all hover:shadow-[0_0_40px_var(--accent-glow-strong)] hover:-translate-y-0.5"
+            >
+              Open Builder
+              <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
             </a>
-            <a href="#features" className="px-8 py-4 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-xl text-lg backdrop-blur-md transition-all border border-white/10 hover:border-white/30">
-              See How It Works
+            <a 
+              href="#features" 
+              className="inline-flex items-center gap-2 px-8 py-4 border border-[var(--border)] text-[var(--text-primary)] font-medium rounded-xl text-lg transition-all hover:border-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)]"
+            >
+              How It Works
             </a>
+          </div>
+
+          {/* Code snippet preview */}
+          <div className="animate-fade-in-up delay-5 mt-16 max-w-lg">
+            <div className="bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl p-4 font-mono-brand text-sm">
+              <div className="flex gap-1.5 mb-3">
+                <div className="w-2.5 h-2.5 rounded-full bg-[var(--error)] opacity-60"></div>
+                <div className="w-2.5 h-2.5 rounded-full bg-[var(--warning)] opacity-60"></div>
+                <div className="w-2.5 h-2.5 rounded-full bg-[var(--success)] opacity-60"></div>
+              </div>
+              <code className="text-[var(--text-secondary)]">
+                <span className="text-[var(--text-tertiary)]">&lt;</span>
+                <span className="text-[var(--accent)]">script</span>
+                {' '}
+                <span className="text-[var(--warning)]">src</span>
+                <span className="text-[var(--text-tertiary)]">=</span>
+                <span className="text-[var(--success)]">&quot;/embed.js&quot;</span>
+                {' '}
+                <span className="text-[var(--warning)]">data-agent</span>
+                <span className="text-[var(--text-tertiary)]">=</span>
+                <span className="text-[var(--success)]">&quot;your-id&quot;</span>
+                <span className="text-[var(--text-tertiary)]"> /&gt;</span>
+              </code>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-24 max-w-6xl mx-auto px-6">
-        <div className="text-center mb-20">
-          <h2 className="text-3xl md:text-5xl font-bold text-slate-800 mb-4">Why Agentic Studio?</h2>
-          <p className="text-xl text-slate-500">The platform designed for the next generation of AI.</p>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-8">
-          {/* Feature 1 */}
-          <div className="bg-white p-8 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
-            <div className="w-16 h-16 bg-gradient-to-br from-indigo-100 to-purple-100 text-indigo-600 rounded-2xl flex items-center justify-center text-3xl mb-6 shadow-inner">
-              🧩
-            </div>
-            <h3 className="text-2xl font-bold text-slate-800 mb-4">Visual Builder</h3>
-            <p className="text-slate-600 leading-relaxed">
-              Drag, drop, and connect logic nodes. Define system prompts, equip agents with tools like web search, and set strict guardrails without writing a single line of backend code.
-            </p>
+      <section id="features" className="py-24 md:py-32 border-t border-[var(--border)]">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="mb-20">
+            <p className="font-mono-brand text-xs tracking-[0.2em] uppercase text-[var(--accent)] mb-4">Features</p>
+            <h2 className="font-display text-4xl md:text-6xl tracking-tight">
+              Everything you need<br />
+              <span className="text-[var(--text-tertiary)]">nothing you don't.</span>
+            </h2>
           </div>
 
-          {/* Feature 2 */}
-          <div className="bg-white p-8 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-6 opacity-0 group-hover:opacity-100 transition-opacity">
-              <span className="flex h-3 w-3 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-              </span>
+          <div className="grid md:grid-cols-3 gap-px bg-[var(--border)] rounded-2xl overflow-hidden">
+            {/* Feature 1 */}
+            <div className="bg-[var(--bg-primary)] p-8 md:p-10 group hover:bg-[var(--bg-secondary)] transition-colors">
+              <div className="w-10 h-10 rounded-lg bg-[var(--accent-glow)] flex items-center justify-center text-xl mb-6 group-hover:shadow-[0_0_20px_var(--accent-glow)] transition-shadow">
+                🧩
+              </div>
+              <h3 className="text-xl font-semibold mb-3">Visual Builder</h3>
+              <p className="text-[var(--text-secondary)] leading-relaxed text-sm">
+                Drag-and-drop блоки: промпт, інструменти, обмеження. Зберіть повну логіку агента за хвилину без єдиного рядка бекенд-коду.
+              </p>
             </div>
-            <div className="w-16 h-16 bg-gradient-to-br from-emerald-100 to-teal-100 text-emerald-600 rounded-2xl flex items-center justify-center text-3xl mb-6 shadow-inner">
-              🧠
-            </div>
-            <h3 className="text-2xl font-bold text-slate-800 mb-4">Live Thought Tracking</h3>
-            <p className="text-slate-600 leading-relaxed">
-              Don't leave users waiting. Our widget streams the AI's "thought process" in real-time. Watch as it reasons, calls external tools, and generates responses token by token.
-            </p>
-          </div>
 
-          {/* Feature 3 */}
-          <div className="bg-white p-8 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
-            <div className="w-16 h-16 bg-gradient-to-br from-pink-100 to-rose-100 text-pink-600 rounded-2xl flex items-center justify-center text-3xl mb-6 shadow-inner">
-              🚀
+            {/* Feature 2 */}
+            <div className="bg-[var(--bg-primary)] p-8 md:p-10 group hover:bg-[var(--bg-secondary)] transition-colors">
+              <div className="w-10 h-10 rounded-lg bg-[var(--accent-glow)] flex items-center justify-center text-xl mb-6 group-hover:shadow-[0_0_20px_var(--accent-glow)] transition-shadow">
+                🧠
+              </div>
+              <h3 className="text-xl font-semibold mb-3">Live Thought Tracking</h3>
+              <p className="text-[var(--text-secondary)] leading-relaxed text-sm">
+                SSE-потік показує роздуми агента в реальному часі: думки → виклик інструменту → спостереження → відповідь.
+              </p>
             </div>
-            <h3 className="text-2xl font-bold text-slate-800 mb-4">Deploy Anywhere</h3>
-            <p className="text-slate-600 leading-relaxed">
-              Click publish and get a universal JavaScript snippet. Embed your autonomous chat widget into Shopify, WordPress, or any custom HTML site instantly.
-            </p>
+
+            {/* Feature 3 */}
+            <div className="bg-[var(--bg-primary)] p-8 md:p-10 group hover:bg-[var(--bg-secondary)] transition-colors">
+              <div className="w-10 h-10 rounded-lg bg-[var(--accent-glow)] flex items-center justify-center text-xl mb-6 group-hover:shadow-[0_0_20px_var(--accent-glow)] transition-shadow">
+                🚀
+              </div>
+              <h3 className="text-xl font-semibold mb-3">Deploy Anywhere</h3>
+              <p className="text-[var(--text-secondary)] leading-relaxed text-sm">
+                Один JS-сніпет — і ваш автономний чат-віджет працює на Shopify, WordPress чи будь-якому HTML-сайті.
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Demo Section */}
-      <section className="py-24 bg-slate-100 border-t border-slate-200">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-slate-800 mb-6">Experience the Architecture</h2>
-          <p className="text-lg text-slate-600 mb-12">
-            Interact with the widget in the bottom right corner. See the Server-Sent Events (SSE) streaming in action.
-          </p>
-          <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 inline-block text-left transform transition-all hover:scale-105">
-             <h3 className="text-xl font-bold mb-4 text-slate-800">Tech Stack Powered By:</h3>
-             <ul className="space-y-3 text-slate-600 font-medium text-lg">
-               <li className="flex items-center gap-3"><span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-sm">✓</span> Next.js 14 App Router</li>
-               <li className="flex items-center gap-3"><span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-sm">✓</span> React Flow & Zustand</li>
-               <li className="flex items-center gap-3"><span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-sm">✓</span> FastAPI & Supabase</li>
-               <li className="flex items-center gap-3"><span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-sm">✓</span> Gemini 2.0 Flash AI</li>
-             </ul>
+      {/* Tech Stack Section */}
+      <section className="py-24 border-t border-[var(--border)]">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="grid md:grid-cols-2 gap-16 items-center">
+            <div>
+              <p className="font-mono-brand text-xs tracking-[0.2em] uppercase text-[var(--accent)] mb-4">Architecture</p>
+              <h2 className="font-display text-4xl md:text-5xl tracking-tight mb-6">
+                Built on a<br />
+                <span className="italic text-[var(--accent)]">modern stack.</span>
+              </h2>
+              <p className="text-[var(--text-secondary)] leading-relaxed">
+                Кожен компонент підібраний для максимальної швидкості та надійності.
+                Кастомний ReAct Engine за ~100 рядків Python замість важких фреймворків.
+              </p>
+            </div>
+            <div className="bg-[var(--bg-secondary)] border border-[var(--border)] rounded-2xl p-6 font-mono-brand text-sm">
+              <div className="flex gap-1.5 mb-4">
+                <div className="w-2.5 h-2.5 rounded-full bg-[var(--error)] opacity-60"></div>
+                <div className="w-2.5 h-2.5 rounded-full bg-[var(--warning)] opacity-60"></div>
+                <div className="w-2.5 h-2.5 rounded-full bg-[var(--success)] opacity-60"></div>
+              </div>
+              <div className="space-y-2 text-[var(--text-secondary)]">
+                <div><span className="text-[var(--accent)]">frontend</span>  → Next.js 14 App Router</div>
+                <div><span className="text-[var(--accent)]">state</span>     → React Flow + Zustand</div>
+                <div><span className="text-[var(--accent)]">backend</span>   → FastAPI + Python</div>
+                <div><span className="text-[var(--accent)]">database</span>  → Supabase (Postgres)</div>
+                <div><span className="text-[var(--accent)]">ai_model</span>  → Gemini 2.0 Flash</div>
+                <div><span className="text-[var(--accent)]">search</span>    → Tavily API</div>
+                <div><span className="text-[var(--accent)]">stream</span>    → Server-Sent Events</div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-slate-900 text-slate-400 py-12 text-center border-t border-slate-800">
+      <footer className="border-t border-[var(--border)] py-10">
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="font-bold text-xl text-white tracking-tight">Agentic Studio</div>
-          <p>© 2026 Agentic Studio. Built for the 48-hour Hackathon.</p>
+          <div className="font-display text-xl tracking-tight">Agentic Studio</div>
+          <p className="text-sm text-[var(--text-tertiary)]">© 2026 · Built for the 48-hour Hackathon</p>
         </div>
       </footer>
 
-      {/* Віджет чату (Live Demo) */}
+      {/* Chat Widget */}
       <MockChatWidget />
     </main>
   );

@@ -96,53 +96,50 @@ export default function MockChatWidget({ agentId }: { agentId?: string }) {
     switch (msg.type) {
       case 'user':
         return (
-          <div key={index} className="flex justify-end mb-4">
-            <div className="bg-blue-600 text-white rounded-2xl rounded-tr-sm px-4 py-2 max-w-[85%] shadow-sm">
-              <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+          <div key={index} className="flex justify-end mb-3">
+            <div className="bg-[var(--accent)] text-[var(--text-inverse)] rounded-2xl rounded-br-md px-4 py-2.5 max-w-[85%]">
+              <p className="text-sm">{msg.content}</p>
             </div>
           </div>
         );
       case 'thought':
         return (
-          <div key={index} className="flex justify-start mb-2">
-            <div className="flex items-center gap-2 text-gray-500 bg-gray-50 rounded-lg px-3 py-1.5 text-xs border border-gray-100">
-              <svg className="animate-spin h-3 w-3 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              <span className="italic">{msg.content}</span>
+          <div key={index} className="flex justify-start mb-2 animate-fade-in">
+            <div className="flex items-center gap-2 text-[var(--text-tertiary)] bg-[var(--bg-elevated)] rounded-lg px-3 py-1.5 text-xs border border-[var(--border)]">
+              <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-pulse"></div>
+              <span className="italic font-mono-brand">{msg.content}</span>
             </div>
           </div>
         );
       case 'action':
         return (
-          <div key={index} className="flex justify-start mb-2">
-            <div className="flex flex-col gap-1 bg-emerald-50 text-emerald-800 rounded-lg px-3 py-2 text-xs border border-emerald-100 w-full max-w-[90%] shadow-sm">
-              <div className="font-semibold flex items-center gap-1.5">
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                Виклик інструменту: {msg.tool}
+          <div key={index} className="flex justify-start mb-2 animate-fade-in">
+            <div className="flex flex-col gap-1.5 bg-[var(--bg-elevated)] rounded-lg px-3 py-2 text-xs border border-[var(--accent)] border-opacity-30 w-full max-w-[90%]">
+              <div className="font-semibold flex items-center gap-1.5 text-[var(--accent)] font-mono-brand">
+                <span className="text-[10px]">▶</span>
+                {msg.tool}
               </div>
-              <pre className="overflow-x-auto text-[10px] bg-emerald-100/50 p-1.5 rounded">{JSON.stringify(msg.args, null, 2)}</pre>
+              <pre className="overflow-x-auto text-[10px] text-[var(--text-secondary)] bg-[var(--bg-primary)] p-1.5 rounded font-mono-brand">{JSON.stringify(msg.args, null, 2)}</pre>
             </div>
           </div>
         );
       case 'observation':
         return (
-          <div key={index} className="flex justify-start mb-2">
-             <div className="bg-purple-50 text-purple-800 rounded-lg px-3 py-2 text-xs border border-purple-100 w-full max-w-[90%] shadow-sm">
-                <div className="font-semibold mb-1 flex items-center gap-1.5">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-                  Результат (Observation):
+          <div key={index} className="flex justify-start mb-2 animate-fade-in">
+             <div className="bg-[var(--bg-elevated)] rounded-lg px-3 py-2 text-xs border border-[var(--border)] w-full max-w-[90%]">
+                <div className="font-semibold mb-1 flex items-center gap-1.5 text-[var(--warning)] font-mono-brand text-[10px] uppercase tracking-wider">
+                  <span>◉</span>
+                  Observation
                 </div>
-                <div className="line-clamp-3 text-[11px] leading-tight opacity-90">{msg.content}</div>
+                <div className="line-clamp-3 text-[11px] leading-relaxed text-[var(--text-secondary)]">{msg.content}</div>
              </div>
           </div>
         );
       case 'message':
       default:
         return (
-          <div key={index} className="flex justify-start mb-4">
-            <div className="bg-white border border-gray-200 text-gray-800 rounded-2xl rounded-tl-sm px-4 py-2.5 max-w-[85%] shadow-sm">
+          <div key={index} className="flex justify-start mb-3">
+            <div className="bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-primary)] rounded-2xl rounded-bl-md px-4 py-2.5 max-w-[85%]">
               <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
             </div>
           </div>
@@ -152,10 +149,11 @@ export default function MockChatWidget({ agentId }: { agentId?: string }) {
 
   return (
     <>
+      {/* FAB Toggle */}
       {!agentId && (
         <button
           onClick={() => setIsOpen(true)}
-          className={`fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-full shadow-xl flex items-center justify-center text-white hover:scale-105 transition-transform z-50 ${isOpen ? 'scale-0 opacity-0' : 'scale-100 opacity-100'}`}
+          className={`fixed bottom-6 right-6 w-14 h-14 bg-[var(--accent)] rounded-full shadow-[0_0_30px_var(--accent-glow-strong)] flex items-center justify-center text-[var(--text-inverse)] hover:scale-110 transition-all z-50 ${isOpen ? 'scale-0 opacity-0' : 'scale-100 opacity-100'}`}
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
@@ -163,23 +161,25 @@ export default function MockChatWidget({ agentId }: { agentId?: string }) {
         </button>
       )}
 
+      {/* Chat Panel */}
       <div 
         className={agentId 
-          ? `w-full h-screen bg-gray-50 flex flex-col overflow-hidden`
-          : `fixed bottom-6 right-6 w-[380px] h-[600px] max-h-[85vh] bg-gray-50 rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 origin-bottom-right z-50 border border-gray-100 ${isOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'}`}
+          ? `w-full h-screen bg-[var(--bg-primary)] flex flex-col overflow-hidden`
+          : `fixed bottom-6 right-6 w-[380px] h-[600px] max-h-[85vh] bg-[var(--bg-primary)] rounded-2xl shadow-2xl shadow-black/40 flex flex-col overflow-hidden transition-all duration-300 origin-bottom-right z-50 border border-[var(--border)] ${isOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'}`}
       >
-        <div className="bg-white border-b px-5 py-4 flex justify-between items-center z-10">
+        {/* Header */}
+        <div className="bg-[var(--bg-secondary)] border-b border-[var(--border)] px-4 py-3 flex justify-between items-center z-10">
           <div className="flex items-center gap-3">
-            <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
+            <div className="w-2 h-2 bg-[var(--accent)] rounded-full animate-pulse"></div>
             <div>
-              <h3 className="font-bold text-gray-800 text-sm">Agentic AI</h3>
-              <p className="text-[10px] text-gray-500 font-medium">ReAct Live Tracking</p>
+              <h3 className="font-semibold text-[var(--text-primary)] text-sm">Agentic AI</h3>
+              <p className="text-[10px] text-[var(--text-tertiary)] font-mono-brand">ReAct Live Tracking</p>
             </div>
           </div>
           {!agentId && (
             <button 
               onClick={() => setIsOpen(false)}
-              className="text-gray-400 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+              className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] w-7 h-7 rounded-md flex items-center justify-center transition-colors hover:bg-[var(--bg-elevated)]"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -188,15 +188,16 @@ export default function MockChatWidget({ agentId }: { agentId?: string }) {
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 scroll-smooth">
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-4 scrollbar-thin">
           {messages.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-center opacity-60">
-               <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                  <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
+            <div className="h-full flex flex-col items-center justify-center text-center">
+               <div className="w-12 h-12 rounded-xl bg-[var(--accent-glow)] flex items-center justify-center mb-4">
+                 <svg className="w-6 h-6 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                 </svg>
                </div>
-               <p className="text-sm text-gray-600 max-w-[200px]">Привіт! Поставте запитання і я використаю налаштовані інструменти для відповіді.</p>
+               <p className="text-sm text-[var(--text-tertiary)] max-w-[200px]">Поставте запитання — я використаю інструменти для відповіді.</p>
             </div>
           ) : (
             messages.map((msg, index) => renderMessageContent(msg, index))
@@ -204,20 +205,21 @@ export default function MockChatWidget({ agentId }: { agentId?: string }) {
           <div ref={messagesEndRef} />
         </div>
 
-        <div className="p-4 bg-white border-t z-10">
+        {/* Input */}
+        <div className="p-3 bg-[var(--bg-secondary)] border-t border-[var(--border)] z-10">
           <form onSubmit={handleSubmit} className="relative flex items-center">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Введіть ваше повідомлення..."
-              className="w-full pl-4 pr-12 py-3 bg-gray-100 border-transparent focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 rounded-xl text-sm transition-all outline-none"
+              placeholder="Введіть повідомлення..."
+              className="w-full pl-4 pr-12 py-3 bg-[var(--bg-primary)] border border-[var(--border)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] rounded-xl text-sm transition-all outline-none text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)]"
               disabled={loading}
             />
             <button
               type="submit"
               disabled={loading || !input.trim()}
-              className="absolute right-2 p-2 text-blue-600 disabled:text-gray-400 hover:bg-blue-50 rounded-lg transition-colors"
+              className="absolute right-2 p-2 text-[var(--accent)] disabled:text-[var(--text-tertiary)] hover:bg-[var(--accent-glow)] rounded-lg transition-colors"
             >
               <svg className="w-5 h-5 -rotate-90" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />

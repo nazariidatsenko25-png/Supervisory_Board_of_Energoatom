@@ -14,46 +14,58 @@ export function ToolNode({ id, data }: { id: string, data: any }) {
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl border-0 overflow-hidden min-w-[280px] transition-all hover:shadow-2xl">
-      <Handle type="target" position={Position.Top} className="w-4 h-4 bg-emerald-500 border-2 border-white rounded-full shadow-md -translate-y-2" />
-      <div className="bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-3 flex items-center justify-between">
-        <div className="font-bold text-white flex items-center gap-2">
-          <span>🛠️</span> Інструменти (Tools)
-        </div>
+    <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] overflow-hidden min-w-[280px] transition-all hover:border-[var(--accent)] hover:shadow-[0_0_24px_var(--accent-glow)]">
+      <Handle type="target" position={Position.Top} className="w-3 h-3 !bg-[var(--accent)] !border-2 !border-[var(--bg-card)] rounded-full -translate-y-1.5" />
+      <div className="px-4 py-3 border-b border-[var(--border)] flex items-center gap-2">
+        <span className="text-base">🛠️</span>
+        <span className="text-sm font-semibold text-[var(--text-primary)]">Інструменти</span>
       </div>
-      <div className="p-5 flex flex-col gap-3">
-        <label className="flex items-center justify-between p-3 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors group">
+      <div className="p-4 flex flex-col gap-2">
+        {/* Web Search */}
+        <label className="flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors border border-[var(--border)] hover:border-[var(--text-tertiary)] group">
           <div className="flex items-center gap-3">
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-lg ${activeTools.includes('web_search') ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+            <div className={`w-7 h-7 rounded-md flex items-center justify-center text-sm transition-colors ${activeTools.includes('web_search') ? 'bg-[var(--accent-glow)] text-[var(--accent)]' : 'bg-[var(--bg-elevated)] text-[var(--text-tertiary)]'}`}>
               🔍
             </div>
-            <span className={`text-sm font-semibold ${activeTools.includes('web_search') ? 'text-slate-800' : 'text-slate-600'}`}>Web Search (Tavily)</span>
+            <div>
+              <span className={`text-sm font-medium block ${activeTools.includes('web_search') ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}`}>Web Search</span>
+              <span className="text-[10px] text-[var(--text-tertiary)]">Tavily API</span>
+            </div>
+          </div>
+          <div className={`w-8 h-4 rounded-full transition-colors relative ${activeTools.includes('web_search') ? 'bg-[var(--accent)]' : 'bg-[var(--bg-elevated)]'}`}>
+            <div className={`w-3 h-3 rounded-full bg-white absolute top-0.5 transition-all ${activeTools.includes('web_search') ? 'left-4.5 right-0.5' : 'left-0.5'}`} style={activeTools.includes('web_search') ? {left: '18px'} : {left: '2px'}}></div>
           </div>
           <input 
             type="checkbox" 
-            className="w-5 h-5 text-emerald-500 rounded-md border-slate-300 focus:ring-emerald-500 cursor-pointer"
+            className="sr-only"
             checked={activeTools.includes('web_search')}
             onChange={() => handleToggle('web_search')}
           />
         </label>
-        
-        {/* Calculator tool */}
-        <label className="flex items-center justify-between p-3 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors group">
+
+        {/* Calculator */}
+        <label className="flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors border border-[var(--border)] hover:border-[var(--text-tertiary)] group">
           <div className="flex items-center gap-3">
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-lg ${activeTools.includes('calculator') ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+            <div className={`w-7 h-7 rounded-md flex items-center justify-center text-sm transition-colors ${activeTools.includes('calculator') ? 'bg-[var(--accent-glow)] text-[var(--accent)]' : 'bg-[var(--bg-elevated)] text-[var(--text-tertiary)]'}`}>
               🧮
             </div>
-            <span className={`text-sm font-semibold ${activeTools.includes('calculator') ? 'text-slate-800' : 'text-slate-600'}`}>Calculator</span>
+            <div>
+              <span className={`text-sm font-medium block ${activeTools.includes('calculator') ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}`}>Calculator</span>
+              <span className="text-[10px] text-[var(--text-tertiary)]">Math engine</span>
+            </div>
+          </div>
+          <div className={`w-8 h-4 rounded-full transition-colors relative ${activeTools.includes('calculator') ? 'bg-[var(--accent)]' : 'bg-[var(--bg-elevated)]'}`}>
+            <div className={`w-3 h-3 rounded-full bg-white absolute top-0.5 transition-all`} style={activeTools.includes('calculator') ? {left: '18px'} : {left: '2px'}}></div>
           </div>
           <input 
             type="checkbox" 
-            className="w-5 h-5 text-emerald-500 rounded-md border-slate-300 focus:ring-emerald-500 cursor-pointer"
+            className="sr-only"
             checked={activeTools.includes('calculator')}
             onChange={() => handleToggle('calculator')}
           />
         </label>
       </div>
-      <Handle type="source" position={Position.Bottom} className="w-4 h-4 bg-emerald-500 border-2 border-white rounded-full shadow-md translate-y-2" />
+      <Handle type="source" position={Position.Bottom} className="w-3 h-3 !bg-[var(--accent)] !border-2 !border-[var(--bg-card)] rounded-full translate-y-1.5" />
     </div>
   );
 }

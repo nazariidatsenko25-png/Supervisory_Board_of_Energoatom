@@ -47,33 +47,40 @@ export default function BuilderPage() {
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(generatedScript);
-    alert('Copied to clipboard!');
   };
 
   return (
-    <div className="h-screen w-full flex flex-col bg-slate-50">
-      <header className="bg-gradient-to-r from-indigo-900 to-purple-800 border-b px-6 py-4 flex items-center justify-between shadow-md z-10">
-        <div>
-          <h1 className="text-xl font-bold text-white">Agentic Studio Builder</h1>
-          <p className="text-sm text-indigo-200">Складіть логіку вашого агента за допомогою блоків</p>
+    <div className="h-screen w-full flex flex-col bg-[var(--bg-primary)]">
+      {/* Header */}
+      <header className="bg-[var(--bg-secondary)] border-b border-[var(--border)] px-6 py-4 flex items-center justify-between z-10">
+        <div className="flex items-center gap-4">
+          <a href="/" className="font-display text-lg text-[var(--text-primary)] hover:text-[var(--accent)] transition-colors">
+            Agentic Studio
+          </a>
+          <div className="w-px h-5 bg-[var(--border)]"></div>
+          <div>
+            <h1 className="text-sm font-semibold text-[var(--text-primary)]">Builder</h1>
+            <p className="text-xs text-[var(--text-tertiary)]">Складіть логіку вашого агента</p>
+          </div>
         </div>
-        <div className="flex gap-4">
+        <div className="flex gap-3">
           <button 
             onClick={handleDeploy}
             disabled={isDeploying}
-            className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-400 text-white rounded-lg text-sm font-semibold transition-all shadow-lg hover:shadow-emerald-500/30 flex items-center gap-2"
+            className="px-5 py-2 bg-[var(--accent)] hover:brightness-110 disabled:opacity-50 text-[var(--text-inverse)] rounded-lg text-sm font-semibold transition-all hover:shadow-[0_0_24px_var(--accent-glow-strong)] flex items-center gap-2"
           >
-            {isDeploying ? 'Deploying...' : 'Save & Deploy 🚀'}
+            {isDeploying ? 'Deploying...' : 'Deploy Agent →'}
           </button>
           <a 
             href="/"
-            className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-lg text-sm font-medium transition-colors shadow-sm backdrop-blur-sm flex items-center gap-2"
+            className="px-4 py-2 border border-[var(--border)] hover:border-[var(--text-tertiary)] text-[var(--text-secondary)] rounded-lg text-sm font-medium transition-colors"
           >
-            Тестувати Віджет &rarr;
+            Preview
           </a>
         </div>
       </header>
 
+      {/* Canvas */}
       <div className="flex-1 w-full h-full relative">
         <ReactFlow
           nodes={nodes}
@@ -83,43 +90,53 @@ export default function BuilderPage() {
           onConnect={onConnect}
           nodeTypes={nodeTypes}
           fitView
-          className="bg-slate-50"
+          className="bg-[var(--bg-primary)]"
         >
-          <Background color="#ccc" gap={16} />
-          <Controls className="bg-white shadow-lg border-none rounded-xl overflow-hidden" />
-          <MiniMap nodeStrokeWidth={3} className="rounded-xl shadow-lg border-none" />
+          <Background color="#2A2A2E" gap={20} size={1} />
+          <Controls 
+            className="!bg-[var(--bg-secondary)] !border-[var(--border)] !rounded-xl !shadow-2xl [&>button]:!bg-[var(--bg-secondary)] [&>button]:!border-[var(--border)] [&>button]:!text-[var(--text-secondary)] [&>button:hover]:!bg-[var(--bg-elevated)]" 
+          />
+          <MiniMap 
+            nodeStrokeWidth={3} 
+            className="!rounded-xl !shadow-2xl !border-[var(--border)] !bg-[var(--bg-secondary)]" 
+            maskColor="rgba(12, 12, 14, 0.8)"
+          />
         </ReactFlow>
 
+        {/* Deploy Success Modal */}
         {showSuccessModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-              <div className="bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-4">
-                <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                  🎉 Успішно розгорнуто!
-                </h2>
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4">
+            <div className="bg-[var(--bg-secondary)] border border-[var(--border)] rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-fade-in-up">
+              {/* Modal header */}
+              <div className="border-b border-[var(--border)] px-6 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-[var(--accent-glow)] flex items-center justify-center">
+                    <span className="text-[var(--accent)]">✓</span>
+                  </div>
+                  <h2 className="text-lg font-semibold text-[var(--text-primary)]">Agent Deployed</h2>
+                </div>
+                <button 
+                  onClick={() => setShowSuccessModal(false)}
+                  className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+                >
+                  ✕
+                </button>
               </div>
+
+              {/* Modal body */}
               <div className="p-6">
-                <p className="text-gray-600 mb-4 text-lg">
-                  Ваш агент готовий до роботи. Додайте цей скрипт на ваш сайт перед закриваючим тегом <code>&lt;/body&gt;</code>:
+                <p className="text-[var(--text-secondary)] mb-4 text-sm">
+                  Додайте цей сніпет перед <code className="font-mono-brand text-[var(--accent)] bg-[var(--bg-tertiary)] px-1.5 py-0.5 rounded">&lt;/body&gt;</code>:
                 </p>
                 <div className="relative group">
-                  <pre className="bg-gray-900 text-green-400 p-4 rounded-xl overflow-x-auto font-mono text-sm shadow-inner border border-gray-800">
+                  <pre className="bg-[var(--bg-primary)] border border-[var(--border)] text-[var(--accent)] p-4 rounded-xl overflow-x-auto font-mono-brand text-sm">
                     {generatedScript}
                   </pre>
                   <button 
                     onClick={copyToClipboard}
-                    className="absolute top-3 right-3 bg-white/10 hover:bg-white/20 text-white p-2 rounded-lg backdrop-blur-md transition-colors"
-                    title="Copy to clipboard"
+                    className="absolute top-3 right-3 bg-[var(--bg-elevated)] hover:bg-[var(--border-light)] text-[var(--text-secondary)] px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border border-[var(--border)]"
                   >
-                    📋 Copy
-                  </button>
-                </div>
-                <div className="mt-8 flex justify-end">
-                  <button 
-                    onClick={() => setShowSuccessModal(false)}
-                    className="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium rounded-lg transition-colors"
-                  >
-                    Закрити
+                    Copy
                   </button>
                 </div>
               </div>
