@@ -10,6 +10,7 @@ export default function MockChatWidget({ agentId }: { agentId?: string }) {
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const getAgentConfig = useStore(state => state.getAgentConfig);
+  const getWorkflowConfig = useStore(state => state.getWorkflowConfig);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -29,7 +30,9 @@ export default function MockChatWidget({ agentId }: { agentId?: string }) {
     setLoading(true);
 
     try {
+      let url = 'http://127.0.0.1:8000/api/chat/stream';
       let payload;
+
       if (agentId) {
         payload = {
           agent_id: agentId,
@@ -37,14 +40,25 @@ export default function MockChatWidget({ agentId }: { agentId?: string }) {
           session_id: null
         };
       } else {
-        const config = getAgentConfig();
-        payload = {
-          ...config,
-          message: userMessage
-        };
+        // Check if this is a multi-step workflow
+        const workflowConfig = getWorkflowConfig();
+        if (workflowConfig.mode === 'workflow') {
+          url = 'http://127.0.0.1:8000/api/workflow/stream';
+          payload = {
+            steps: workflowConfig.steps,
+            message: userMessage
+          };
+        } else {
+          // Single agent mode (backward compat)
+          const config = workflowConfig.singleConfig || getAgentConfig();
+          payload = {
+            ...config,
+            message: userMessage
+          };
+        }
       }
 
-      const response = await fetch('http://127.0.0.1:8000/api/chat/stream', {
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -106,6 +120,33 @@ export default function MockChatWidget({ agentId }: { agentId?: string }) {
         return (
           <div key={index} className="mb-2 text-center animate-fade-in">
             <span className="text-[10px] text-[var(--text-tertiary)] font-mono-brand">{msg.content}</span>
+          </div>
+        );
+      case 'step_start':
+        return (
+          <div key={index} className="mb-3 animate-fade-in">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--accent-glow)] border border-[var(--accent)] border-opacity-30">
+              <div className="w-5 h-5 rounded-full bg-[var(--accent)] flex items-center justify-center text-[10px] font-bold text-[var(--text-inverse)]">
+                {(msg.step_index ?? 0) + 1}
+              </div>
+              <span className="text-xs font-semibold text-[var(--accent)]">
+                Крок {(msg.step_index ?? 0) + 1}/{msg.total_steps}
+              </span>
+              <span className="text-[10px] text-[var(--text-secondary)] truncate flex-1">
+                {msg.step_label}
+              </span>
+              <div className="w-2 h-2 bg-[var(--accent)] rounded-full animate-pulse" />
+            </div>
+          </div>
+        );
+      case 'step_end':
+        return (
+          <div key={index} className="mb-3 animate-fade-in">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[rgba(52,211,153,0.08)] border border-[var(--success)] border-opacity-20">
+              <span className="text-[10px] text-[var(--success)] font-mono-brand font-semibold">
+                ✓ Крок {(msg.step_index ?? 0) + 1} завершено
+              </span>
+            </div>
           </div>
         );
       case 'thought':
