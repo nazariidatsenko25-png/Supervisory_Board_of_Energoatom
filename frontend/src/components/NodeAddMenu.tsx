@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { NODE_CATALOG, CATEGORIES, NodeCatalogItem, useStore } from '@/store/agentStore';
+import { getLucideIcon } from '@/components/Icons';
 
 type Props = {
   sourceNodeId: string;
@@ -143,6 +144,7 @@ export function NodeAddMenu({
           className="absolute w-[260px] bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl shadow-2xl overflow-hidden animate-fade-in-up"
           style={menuPositionStyle}
           onClick={(e) => e.stopPropagation()}
+          onWheelCapture={(e) => e.stopPropagation()}
         >
           {/* Search */}
           <div className="p-2.5 border-b border-[var(--border)]">
@@ -175,7 +177,7 @@ export function NodeAddMenu({
                         className="w-6 h-6 rounded-md flex items-center justify-center text-xs flex-shrink-0"
                         style={{ background: getNodeGlow(item.type) }}
                       >
-                        {item.icon}
+                        {getLucideIcon(item.icon, "w-3.5 h-3.5 text-[var(--text-inverse)]")}
                       </div>
                       <div className="min-w-0">
                         <span className="text-xs font-medium text-[var(--text-primary)] block leading-tight truncate">

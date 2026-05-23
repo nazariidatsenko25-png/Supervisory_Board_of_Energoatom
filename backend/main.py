@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from supabase import create_client, Client
 
 from engine.react_loop import execute_agent
+from engine.workflow import execute_workflow
 
 load_dotenv()
 
@@ -112,7 +113,9 @@ async def list_agents():
     
     response = supabase.table("agents").select("*").execute()
     
-    return {"agents": response.data or []}
+    agents = response.data or []
+    agents.reverse()  # Newest agents first
+    return {"agents": agents}
 
 
 @app.delete("/api/agents/{agent_id}")
@@ -276,6 +279,60 @@ async def chat_stream(request: StreamRequest):
             "X-Accel-Buffering": "no",
         }
     )
+
+# ─── WORKFLOW STREAMING ───
+
+class WorkflowStep(BaseModel):
+    step_id: str = ""
+    label: str = "Step"
+    system_prompt: str = ""
+    tools: List[str] = []
+    max_iterations: int = 5
+    knowledge_sources: Optional[List[KnowledgeSource]] = []
+    output_format: Optional[OutputFormat] = None
+    api_integrations: Optional[List[ApiIntegration]] = []
+    memory_config: Optional[MemoryConfig] = None
+    conditions: Optional[List[ConditionConfig]] = []
+
+class WorkflowRequest(BaseModel):
+    steps: List[WorkflowStep]
+    message: str
+
+
+@app.post("/api/workflow/stream")
+async def workflow_stream(request: WorkflowRequest):
+    """Execute a multi-step workflow sequentially."""
+    # Convert Pydantic models to dicts for the workflow executor
+    steps_dicts = []
+    for step in request.steps:
+        steps_dicts.append({
+            "step_id": step.step_id,
+            "label": step.label,
+            "system_prompt": step.system_prompt,
+            "tools": step.tools,
+            "max_iterations": step.max_iterations,
+            "knowledge_sources": [ks.dict() for ks in (step.knowledge_sources or [])] or None,
+            "output_format": step.output_format.dict() if step.output_format else None,
+            "api_integrations": [ai.dict() for ai in (step.api_integrations or [])] or None,
+            "memory_config": step.memory_config.dict() if step.memory_config else None,
+            "conditions": [c.dict() for c in (step.conditions or [])] or None,
+        })
+
+    generator = execute_workflow(
+        steps=steps_dicts,
+        user_message=request.message,
+    )
+
+    return StreamingResponse(
+        generator,
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
+
 
 @app.get("/health")
 async def health_check():

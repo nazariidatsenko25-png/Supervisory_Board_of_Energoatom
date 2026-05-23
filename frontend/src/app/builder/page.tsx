@@ -182,6 +182,7 @@ export default function BuilderPage() {
             onPaneClick={onPaneClick}
             nodeTypes={nodeTypes}
             fitView
+            fitViewOptions={{ maxZoom: 0.75, padding: 0.3 }}
             className="bg-[var(--bg-primary)]"
             deleteKeyCode={['Backspace', 'Delete']}
           >

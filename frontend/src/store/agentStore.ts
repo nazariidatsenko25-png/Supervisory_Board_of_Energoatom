@@ -151,6 +151,26 @@ export type AgentConfig = {
   conditions: { expression: string }[];
 };
 
+export type WorkflowStep = {
+  step_id: string;
+  label: string;
+  system_prompt: string;
+  tools: string[];
+  max_iterations: number;
+  knowledge_sources: { source_type: string; source_value: string }[];
+  output_format: { format: string; schema: string } | null;
+  api_integrations: { method: string; url: string; headers: string; body: string }[];
+  memory_config: { memory_type: string; ttl_minutes: number } | null;
+  conditions: { expression: string }[];
+};
+
+export type WorkflowConfig = {
+  mode: 'single' | 'workflow';
+  steps: WorkflowStep[];
+  // Flat config for backward compat in single mode
+  singleConfig?: AgentConfig;
+};
+
 // ─── STORE ───
 
 type RFState = {
@@ -164,6 +184,7 @@ type RFState = {
   addNodeWithEdge: (sourceNodeId: string, type: string, data: Record<string, any>, sourceHandleId?: string) => void;
   removeNode: (nodeId: string) => void;
   getAgentConfig: () => AgentConfig;
+  getWorkflowConfig: () => WorkflowConfig;
 };
 
 let nodeIdCounter = 10;
@@ -336,6 +357,168 @@ export const useStore = create<RFState>((set, get) => ({
       api_integrations,
       memory_config,
       conditions,
+    };
+  },
+
+  getWorkflowConfig: (): WorkflowConfig => {
+    const nodes = get().nodes;
+    const edges = get().edges;
+
+    // ── Topological sort (BFS / Kahn's algorithm) ──
+    const adjacency: Record<string, string[]> = {};
+    const inDegree: Record<string, number> = {};
+
+    for (const node of nodes) {
+      adjacency[node.id] = [];
+      inDegree[node.id] = 0;
+    }
+    for (const edge of edges) {
+      if (adjacency[edge.source]) {
+        adjacency[edge.source].push(edge.target);
+      }
+      if (inDegree[edge.target] !== undefined) {
+        inDegree[edge.target]++;
+      }
+    }
+
+    const queue: string[] = [];
+    for (const nodeId of Object.keys(inDegree)) {
+      if (inDegree[nodeId] === 0) queue.push(nodeId);
+    }
+
+    const sorted: string[] = [];
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      sorted.push(current);
+      for (const neighbor of (adjacency[current] || [])) {
+        inDegree[neighbor]--;
+        if (inDegree[neighbor] === 0) queue.push(neighbor);
+      }
+    }
+
+    // ── Build node lookup ──
+    const nodeMap: Record<string, Node> = {};
+    for (const node of nodes) {
+      nodeMap[node.id] = node;
+    }
+
+    // ── Count prompt nodes ──
+    const promptNodeIds = sorted.filter((id) => nodeMap[id]?.type === 'prompt');
+
+    // If 0 or 1 prompt nodes → single mode (backward compat)
+    if (promptNodeIds.length <= 1) {
+      return {
+        mode: 'single',
+        steps: [],
+        singleConfig: get().getAgentConfig(),
+      };
+    }
+
+    // ── Multi-prompt: group config nodes with their nearest downstream prompt ──
+    // Walk sorted order. Accumulate config until we hit a prompt → flush as a step.
+    const steps: WorkflowStep[] = [];
+    let currentTools: string[] = [];
+    let currentMaxIterations = 5;
+    let currentKnowledge: { source_type: string; source_value: string }[] = [];
+    let currentOutputFormat: { format: string; schema: string } | null = null;
+    let currentApi: { method: string; url: string; headers: string; body: string }[] = [];
+    let currentMemory: { memory_type: string; ttl_minutes: number } | null = null;
+    let currentConditions: { expression: string }[] = [];
+
+    for (const nodeId of sorted) {
+      const node = nodeMap[nodeId];
+      if (!node) continue;
+
+      switch (node.type) {
+        case 'prompt': {
+          // Flush accumulated config into a step
+          const catalog = NODE_CATALOG.find((c) => c.type === 'prompt');
+          steps.push({
+            step_id: node.id,
+            label: node.data?.system_prompt
+              ? node.data.system_prompt.slice(0, 40) + (node.data.system_prompt.length > 40 ? '...' : '')
+              : catalog?.label || 'Prompt',
+            system_prompt: node.data?.system_prompt || '',
+            tools: [...currentTools],
+            max_iterations: currentMaxIterations,
+            knowledge_sources: [...currentKnowledge],
+            output_format: currentOutputFormat,
+            api_integrations: [...currentApi],
+            memory_config: currentMemory,
+            conditions: [...currentConditions],
+          });
+          // Reset accumulators for next step
+          currentTools = [];
+          currentMaxIterations = 5;
+          currentKnowledge = [];
+          currentOutputFormat = null;
+          currentApi = [];
+          currentMemory = null;
+          currentConditions = [];
+          break;
+        }
+        case 'tool':
+          if (node.data?.enabled && node.data?.tool_id) {
+            currentTools.push(node.data.tool_id);
+          }
+          break;
+        case 'guardrail':
+          if (node.data?.max_iterations) currentMaxIterations = node.data.max_iterations;
+          break;
+        case 'knowledge':
+          if (node.data?.source_value) {
+            currentKnowledge.push({
+              source_type: node.data.source_type || 'url',
+              source_value: node.data.source_value,
+            });
+          }
+          break;
+        case 'output_format':
+          currentOutputFormat = {
+            format: node.data?.format || 'markdown',
+            schema: node.data?.schema || '',
+          };
+          break;
+        case 'api':
+          if (node.data?.url) {
+            currentApi.push({
+              method: node.data.method || 'GET',
+              url: node.data.url,
+              headers: node.data.headers || '',
+              body: node.data.body || '',
+            });
+          }
+          break;
+        case 'memory':
+          currentMemory = {
+            memory_type: node.data?.memory_type || 'session',
+            ttl_minutes: node.data?.ttl_minutes || 60,
+          };
+          break;
+        case 'condition':
+          if (node.data?.expression) {
+            currentConditions.push({ expression: node.data.expression });
+          }
+          break;
+      }
+    }
+
+    // If there are trailing config nodes after the last prompt,
+    // attach them to the last step
+    if (steps.length > 0) {
+      const lastStep = steps[steps.length - 1];
+      if (currentTools.length) lastStep.tools.push(...currentTools);
+      if (currentKnowledge.length) lastStep.knowledge_sources.push(...currentKnowledge);
+      if (currentOutputFormat) lastStep.output_format = currentOutputFormat;
+      if (currentApi.length) lastStep.api_integrations.push(...currentApi);
+      if (currentMemory) lastStep.memory_config = currentMemory;
+      if (currentConditions.length) lastStep.conditions.push(...currentConditions);
+      if (currentMaxIterations !== 5) lastStep.max_iterations = currentMaxIterations;
+    }
+
+    return {
+      mode: 'workflow',
+      steps,
     };
   },
 }));
