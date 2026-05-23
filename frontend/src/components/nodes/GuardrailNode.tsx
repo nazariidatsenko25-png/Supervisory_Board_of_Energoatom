@@ -11,7 +11,7 @@ export function GuardrailNode({ id, data }: { id: string, data: any }) {
       <Handle
         type="target"
         position={Position.Top}
-        className="!w-1 !h-1 !bg-transparent !border-none z-10 flex items-center justify-center group/handle !top-0 !-translate-x-1/2 !-translate-y-1/2"
+        className="!w-8 !h-8 !bg-transparent !border-none z-10 flex items-center justify-center group/handle !top-0 !-translate-x-1/2 !-translate-y-1/2"
       >
         <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-[var(--bg-primary)] transition-all duration-200 group-hover/handle:w-4 group-hover/handle:h-4 group-hover/handle:shadow-[0_0_12px_var(--node-guardrail-glow)]" style={{ background: 'var(--border)' }} />
       </Handle>
