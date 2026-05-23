@@ -41,8 +41,38 @@ After results: "THINK: I found several sources. According to the most recent dat
 MAX_RETRIES = 3
 
 
+def _get_function_calls(response):
+    """Extract function calls from a GenerateContentResponse (SDK v0.3.0 compat)."""
+    try:
+        parts = response.candidates[0].content.parts
+        return [p.function_call for p in parts if p.function_call is not None]
+    except (IndexError, AttributeError):
+        return []
+
+
+def _get_text(response):
+    """Extract concatenated text from a GenerateContentResponse (SDK v0.3.0 compat)."""
+    try:
+        parts = response.candidates[0].content.parts
+        texts = [p.text for p in parts if p.text]
+        return "\n".join(texts) if texts else ""
+    except (IndexError, AttributeError):
+        return ""
+
+
 def get_client():
-    api_key = os.getenv("GEMINI_API_KEY")
+    # Re-read .env each time so key changes are picked up without restart
+    from pathlib import Path
+    from dotenv import dotenv_values
+    env_path = Path(__file__).parent.parent / ".env"
+    if env_path.exists():
+        env_vals = dotenv_values(env_path)
+        api_key = env_vals.get("GEMINI_API_KEY", "").strip()
+    else:
+        api_key = ""
+    # Fallback to process env
+    if not api_key:
+        api_key = os.getenv("GEMINI_API_KEY", "")
     if not api_key:
         raise ValueError("GEMINI_API_KEY is not set.")
     return genai.Client(api_key=api_key)
@@ -52,37 +82,47 @@ def extract_thoughts(text: str) -> tuple[list[str], str]:
     """
     Extract THINK: blocks from model text.
     Returns (list_of_thoughts, remaining_text_without_thinks).
+    
+    Handles cases where THINK: and response are on the same line or
+    consecutive lines without a blank separator.
     """
+    # Use regex to find all THINK: blocks (greedy up to next THINK: or end-of-think markers)
+    think_pattern = re.compile(
+        r'THINK:\s*(.*?)(?=\n\s*(?:ACTION:|OBSERVE:|RESPOND:|THINK:)|\n\s*\n|$)',
+        re.IGNORECASE | re.DOTALL
+    )
+    
     thoughts = []
-    remaining_lines = []
+    for match in think_pattern.finditer(text):
+        thought = match.group(1).strip()
+        if thought:
+            thoughts.append(thought)
     
+    # Remove all THINK: blocks from the text to get the remaining response
+    remaining = think_pattern.sub('', text).strip()
+    
+    # Clean up any leftover empty lines
+    remaining = re.sub(r'\n{3,}', '\n\n', remaining)
+    
+    return thoughts, remaining
+
+
+def strip_thinks(text: str) -> str:
+    """Safety-net: remove any THINK: prefixed content from final user-facing text."""
+    # Remove lines that start with THINK:
     lines = text.split('\n')
-    current_think = None
-    
+    cleaned = []
+    skip = False
     for line in lines:
         stripped = line.strip()
         if stripped.upper().startswith('THINK:'):
-            if current_think is not None:
-                thoughts.append(current_think.strip())
-            current_think = stripped[6:].strip()
-        elif current_think is not None:
-            # Continue multi-line think block
-            if stripped == '' or stripped.upper().startswith(('ACTION:', 'OBSERVE:', 'RESPOND:')):
-                thoughts.append(current_think.strip())
-                current_think = None
-                if stripped and not stripped.upper().startswith('THINK:'):
-                    remaining_lines.append(line)
-            else:
-                current_think += ' ' + stripped
-        else:
-            remaining_lines.append(line)
-    
-    # Flush last think block
-    if current_think is not None:
-        thoughts.append(current_think.strip())
-    
-    remaining = '\n'.join(remaining_lines).strip()
-    return thoughts, remaining
+            skip = True
+            continue
+        if skip and stripped == '':
+            continue  # Skip blank lines right after THINK blocks
+        skip = False
+        cleaned.append(line)
+    return '\n'.join(cleaned).strip()
 
 
 def parse_retry_delay(error_msg: str) -> int:
@@ -176,7 +216,7 @@ async def execute_agent(
         yield f"data: {json.dumps({'type': 'message', 'content': f'Помилка ініціалізації: {str(e)}'})}\n\n"
         return
 
-    model = "gemini-2.0-flash"
+    model = "gemini-2.5-flash"
     
     # Combine ReAct prefix with user's custom system prompt
     full_system_prompt = REACT_SYSTEM_PREFIX
@@ -314,18 +354,22 @@ async def execute_agent(
             yield f"data: {json.dumps({'type': 'message', 'content': friendly_msg})}\n\n"
             break
             
+        # --- Extract function calls and text using SDK-compatible helpers ---
+        func_calls = _get_function_calls(response)
+        response_text = _get_text(response)
+        
         # --- Process tool calls ---
-        if response.function_calls:
+        if func_calls:
             # If there's also text with THINK: blocks, extract and emit them first
-            if response.text:
-                thoughts, _ = extract_thoughts(response.text)
+            if response_text:
+                thoughts, _ = extract_thoughts(response_text)
                 for thought in thoughts:
                     if thought:
                         yield f"data: {json.dumps({'type': 'thought', 'content': thought})}\n\n"
             
-            for function_call in response.function_calls:
-                tool_name = function_call.name
-                tool_args = function_call.args
+            for fc in func_calls:
+                tool_name = fc.name
+                tool_args = dict(fc.args) if fc.args else {}
                 
                 # Phase: Acting
                 yield f"data: {json.dumps({'type': 'phase', 'phase': 'acting', 'iteration': i + 1, 'tool': tool_name})}\n\n"
@@ -364,8 +408,8 @@ async def execute_agent(
             continue  # Next iteration to process tool results
             
         # --- Process text response ---
-        elif response.text:
-            thoughts, remaining = extract_thoughts(response.text)
+        elif response_text:
+            thoughts, remaining = extract_thoughts(response_text)
             
             # Emit each thought as a separate SSE event
             for thought in thoughts:
@@ -376,7 +420,9 @@ async def execute_agent(
             yield f"data: {json.dumps({'type': 'phase', 'phase': 'responding', 'iteration': i + 1})}\n\n"
             
             # Emit the final message (text without THINK: blocks)
-            final_text = remaining if remaining else response.text
+            final_text = remaining if remaining else response_text
+            # Safety net: strip any remaining THINK: content
+            final_text = strip_thinks(final_text)
             if final_text.strip():
                 total_elapsed = time.time() - total_start
                 yield f"data: {json.dumps({'type': 'message', 'content': final_text})}\n\n"
