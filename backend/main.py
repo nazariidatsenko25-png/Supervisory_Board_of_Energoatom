@@ -11,6 +11,7 @@ from supabase import create_client, Client
 
 from engine.react_loop import execute_agent
 from engine.workflow import execute_workflow
+from engine.demo_mode import should_use_demo, execute_demo
 
 load_dotenv()
 
@@ -160,28 +161,15 @@ async def sse_generator_wrapper(generator, session_id: Optional[str]):
         }).execute()
 
 async def mock_generator(user_message: str):
-    """Презентаційний Mock Mode: імітує повний ReAct цикл без реального LLM API."""
-    await asyncio.sleep(0.3)
-    yield f"data: {json.dumps({'type': 'status', 'content': 'Підключення до AI моделі...'})}\n\n"
-    await asyncio.sleep(0.5)
-    yield f"data: {json.dumps({'type': 'thought', 'content': f'Користувач запитує про \"{user_message}\". Мені потрібно проаналізувати, чи потребує це актуальних даних з інтернету, чи я можу відповісти з наявних знань.'})}\n\n"
-    await asyncio.sleep(1.0)
-    yield f"data: {json.dumps({'type': 'thought', 'content': 'Це питання потребує актуальної інформації. Вирішую скористатися пошуком Tavily для отримання свіжих даних.'})}\n\n"
-    await asyncio.sleep(0.6)
-    yield f"data: {json.dumps({'type': 'action', 'tool': 'web_search', 'args': {'query': user_message}})}\n\n"
-    yield f"data: {json.dumps({'type': 'status', 'content': 'Виконую web_search...'})}\n\n"
-    await asyncio.sleep(1.5)
-    yield f"data: {json.dumps({'type': 'observation', 'content': f'Знайдено 5 релевантних результатів. Джерела: Wikipedia, Reuters, офіційні портали. Дані актуальні станом на 2026 рік.'})}\n\n"
-    await asyncio.sleep(0.8)
-    yield f"data: {json.dumps({'type': 'thought', 'content': 'Тепер у мене є актуальні дані з кількох авторитетних джерел. Синтезую інформацію у структуровану відповідь.'})}\n\n"
-    await asyncio.sleep(1.0)
-    yield f"data: {json.dumps({'type': 'message', 'content': f'На основі аналізу актуальних даних щодо \"{user_message}\":\\n\\n📊 **Ключові висновки:**\\n1. Тема активно обговорюється в експертному середовищі.\\n2. Знайдено кілька авторитетних джерел з актуальними даними.\\n3. Основні тренди вказують на позитивну динаміку.\\n\\n💡 *Це демонстрація Live Tracking — ви бачили процес мислення агента в реальному часі!*'})}\n\n"
+    """Презентаційний Demo Mode: повний ReAct цикл з конкурентним аналізом."""
+    async for chunk in execute_demo(user_message):
+        yield chunk
 
 
 @app.post("/api/chat/stream")
 async def chat_stream(request: StreamRequest):
-    # Mock Mode — секретний триггер для безпечної презентації
-    if request.mock:
+    # Demo Mode — manual flag OR auto-detect demo prompt
+    if request.mock or should_use_demo(request.message):
         return StreamingResponse(
             mock_generator(request.message),
             media_type="text/event-stream",

@@ -183,6 +183,10 @@ export default function BuilderPage() {
             nodeTypes={nodeTypes}
             fitView
             fitViewOptions={{ maxZoom: 0.75, padding: 0.3 }}
+            defaultEdgeOptions={{
+              animated: true,
+              style: { stroke: 'var(--accent)', strokeWidth: 2 },
+            }}
             className="bg-[var(--bg-primary)]"
             deleteKeyCode={['Backspace', 'Delete']}
           >
