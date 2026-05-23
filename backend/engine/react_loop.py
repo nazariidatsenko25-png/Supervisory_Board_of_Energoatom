@@ -158,39 +158,7 @@ def format_api_error(error_msg: str) -> str:
     return f"Помилка API: {error_msg[:200]}"
 
 
-async def call_model_with_retry(chat, message, max_retries=MAX_RETRIES):
-    """
-    Send a message to the model with retry logic for rate limits.
-    Yields status events during waits. Returns (response, status_events).
-    """
-    status_events = []
-    last_error = None
-    
-    for attempt in range(max_retries):
-        try:
-            response = chat.send_message(message)
-            return response, status_events
-        except Exception as e:
-            error_msg = str(e)
-            last_error = e
-            
-            is_rate_limit = "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg
-            
-            if is_rate_limit and attempt < max_retries - 1:
-                # Check if it's a hard zero limit (daily exhausted)
-                if "limit: 0" in error_msg:
-                    raise  # No point retrying — daily quota is gone
-                    
-                delay = parse_retry_delay(error_msg)
-                status_events.append({
-                    'type': 'status', 
-                    'content': f'⏳ Rate limit — очікування {delay}с (спроба {attempt + 2}/{max_retries})...'
-                })
-                await asyncio.sleep(delay)
-            else:
-                raise
-    
-    raise last_error
+
 
 
 async def execute_agent(
@@ -308,6 +276,7 @@ async def execute_agent(
         system_instruction=full_system_prompt,
         temperature=0.7,
         tools=tool_funcs if tool_funcs else None,
+        automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True)
     )
     
     # Status: connecting
@@ -345,10 +314,27 @@ async def execute_agent(
         message_to_send = messages.pop() if messages else ""
         
         try:
-            response, status_events = await call_model_with_retry(chat, message_to_send)
-            # Emit any retry status events
-            for evt in status_events:
-                yield f"data: {json.dumps(evt)}\n\n"
+            response = None
+            last_error = None
+            for attempt in range(MAX_RETRIES):
+                try:
+                    response = chat.send_message(message_to_send)
+                    break
+                except Exception as e:
+                    error_msg = str(e)
+                    last_error = e
+                    
+                    is_rate_limit = "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg
+                    if is_rate_limit and attempt < MAX_RETRIES - 1:
+                        if "limit: 0" in error_msg:
+                            raise
+                        delay = parse_retry_delay(error_msg)
+                        yield f"data: {json.dumps({'type': 'status', 'content': f'⏳ Rate limit — очікування {delay}с (спроба {attempt + 2}/{MAX_RETRIES})...'})}\n\n"
+                        await asyncio.sleep(delay)
+                    else:
+                        raise
+            if response is None:
+                raise last_error
         except Exception as e:
             friendly_msg = format_api_error(str(e))
             yield f"data: {json.dumps({'type': 'message', 'content': friendly_msg})}\n\n"
@@ -357,6 +343,11 @@ async def execute_agent(
         # --- Extract function calls and text using SDK-compatible helpers ---
         func_calls = _get_function_calls(response)
         response_text = _get_text(response)
+        
+        # Handle empty responses
+        if not func_calls and not response_text:
+            yield f"data: {json.dumps({'type': 'message', 'content': 'API Error: Model returned an empty response. This may be due to safety filters.'})}\n\n"
+            break
         
         # --- Process tool calls ---
         if func_calls:
@@ -367,6 +358,7 @@ async def execute_agent(
                     if thought:
                         yield f"data: {json.dumps({'type': 'thought', 'content': thought})}\n\n"
             
+            parts = []
             for fc in func_calls:
                 tool_name = fc.name
                 tool_args = dict(fc.args) if fc.args else {}
@@ -394,13 +386,16 @@ async def execute_agent(
                 yield f"data: {json.dumps({'type': 'observation', 'content': obs_preview})}\n\n"
                 yield f"data: {json.dumps({'type': 'status', 'content': f'✓ {tool_name} завершено за {tool_elapsed:.1f}s'})}\n\n"
                 
-                # Send tool result back to model
-                messages.append(
+                # Collect tool result
+                parts.append(
                     types.Part.from_function_response(
                         name=tool_name,
                         response={"result": result}
                     )
                 )
+            
+            # Send all tool results back to model together
+            messages.append(parts)
             
             # Emit iteration end
             iter_elapsed = time.time() - iter_start

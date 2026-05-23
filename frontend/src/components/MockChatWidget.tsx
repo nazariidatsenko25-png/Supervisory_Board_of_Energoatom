@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useStore } from '@/store/agentStore';
-import { SimpleMarkdown } from '@/components/SimpleMarkdown';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export default function MockChatWidget({ agentId, inline }: { agentId?: string; inline?: boolean }) {
   const [isOpen, setIsOpen] = useState(!!agentId || !!inline);
@@ -171,7 +172,12 @@ export default function MockChatWidget({ agentId, inline }: { agentId?: string; 
   };
 
   const renderMarkdown = (content: string) => (
-    <SimpleMarkdown content={content} />
+    <ReactMarkdown 
+      remarkPlugins={[remarkGfm]}
+      className="prose prose-sm max-w-none text-[var(--text-primary)] prose-p:leading-relaxed prose-pre:bg-[var(--bg-primary)] prose-pre:border prose-pre:border-[var(--border)] prose-headings:text-[var(--text-primary)] prose-a:text-[var(--accent)] prose-strong:text-[var(--text-primary)] prose-code:text-[var(--accent)] prose-li:text-[var(--text-secondary)]"
+    >
+      {content}
+    </ReactMarkdown>
   );
 
   const renderMessageContent = (msg: any, index: number) => {
@@ -416,7 +422,7 @@ export default function MockChatWidget({ agentId, inline }: { agentId?: string; 
                 </div>
               )}
               {/* Typing indicator */}
-              {loading && !streamingText && (
+              {loading && !streamingText && messages[messages.length - 1]?.type === 'user' && (
                 <div className="flex justify-start mb-3 animate-fade-in">
                   <div className="bg-[var(--bg-elevated)] border border-[var(--border)] rounded-2xl rounded-bl-md px-4 py-3">
                     <div className="dot-pulse">
