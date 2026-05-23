@@ -14,14 +14,14 @@ export function OutputNode({ id, data }: { id: string; data: any }) {
       <Handle
         type="target"
         position={Position.Top}
-        className="!w-1 !h-1 !bg-transparent !border-none !top-0 !-translate-x-1/2 !-translate-y-1/2 z-10 flex items-center justify-center group/handle before:content-[''] before:absolute before:-inset-4"
+        className="!w-8 !h-8 !bg-transparent !border-none !top-0 !-translate-x-1/2 !-translate-y-1/2 z-10 flex items-center justify-center group/handle "
       >
         <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-[var(--bg-primary)] transition-all duration-200 group-hover/handle:w-4 group-hover/handle:h-4 group-hover/handle:shadow-[0_0_12px_var(--node-output-glow)]" style={{ background: 'var(--border)' }} />
       </Handle>
       <Handle
         type="source"
         position={Position.Bottom}
-        className="!w-1 !h-1 !bg-transparent !border-none !bottom-0 !-translate-x-1/2 !translate-y-1/2 z-10 flex items-center justify-center group/handle before:content-[''] before:absolute before:-inset-4"
+        className="!w-8 !h-8 !bg-transparent !border-none !bottom-0 !-translate-x-1/2 !translate-y-1/2 z-10 flex items-center justify-center group/handle "
       >
         <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-[var(--bg-primary)] transition-all duration-200 group-hover/handle:w-4 group-hover/handle:h-4 group-hover/handle:shadow-[0_0_12px_var(--node-output-glow)]" style={{ background: 'var(--node-output)' }} />
       </Handle>

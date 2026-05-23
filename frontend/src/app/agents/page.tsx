@@ -23,7 +23,7 @@ export default function AgentsPage() {
 
   const fetchAgents = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/agents');
+      const res = await fetch('http://127.0.0.1:8000/api/agents');
       const data = await res.json();
       setAgents(data.agents || []);
     } catch (e) {
@@ -40,7 +40,7 @@ export default function AgentsPage() {
   const confirmDelete = async () => {
     if (!deleteConfirmId) return;
     try {
-      await fetch(`http://localhost:8000/api/agents/${deleteConfirmId}`, { method: 'DELETE' });
+      await fetch(`http://127.0.0.1:8000/api/agents/${deleteConfirmId}`, { method: 'DELETE' });
       setAgents(prev => prev.filter(a => a.id !== deleteConfirmId));
     } catch (e) {
       console.error('Failed to delete:', e);
@@ -63,7 +63,7 @@ export default function AgentsPage() {
     setChatLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8000/api/chat/stream', {
+      const response = await fetch('http://127.0.0.1:8000/api/chat/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ agent_id: chatAgentId, message: userMessage })
