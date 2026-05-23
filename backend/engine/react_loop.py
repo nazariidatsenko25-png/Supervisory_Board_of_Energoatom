@@ -1,0 +1,361 @@
+import os
+import re
+import json
+import asyncio
+from google import genai
+from google.genai import types
+from .tools import web_search, calculator, call_api
+
+# ReAct system prompt that forces the model to "think out loud"
+REACT_SYSTEM_PREFIX = """You are an autonomous AI agent that solves tasks step-by-step using the ReAct framework.
+
+## Your Process
+For EVERY user request, follow this cycle:
+
+1. **THINK** — Analyze the request. What do you know? What do you need to find out? Which tool would help?
+   Write your reasoning clearly, starting with "THINK:"
+
+2. **ACT** — If you need external information, call an available tool.
+
+3. **OBSERVE** — Analyze the tool's output. Did it answer the question? Do you need another tool call?
+
+4. **RESPOND** — Once you have enough information, provide a comprehensive final answer.
+
+## Rules
+- ALWAYS start your first response with "THINK:" followed by your genuine reasoning
+- Be specific in your thinking — mention what you're considering and why
+- If a tool returns an error, explain what happened and try a different approach
+- After receiving tool results, ALWAYS think again before responding ("THINK: Now that I have the search results...")
+- Your final answer should synthesize all gathered information
+
+## Example
+User: "What is the current population of Tokyo?"
+You: "THINK: The user wants the current population of Tokyo. This is a factual question about current data, so I should use web_search to find the most up-to-date information rather than relying on my training data which may be outdated."
+[Then you call web_search]
+After results: "THINK: I found several sources. According to the most recent data..."
+[Then you give a final answer]
+"""
+
+# Maximum number of retries for rate-limited requests
+MAX_RETRIES = 3
+
+
+def get_client():
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise ValueError("GEMINI_API_KEY is not set.")
+    return genai.Client(api_key=api_key)
+
+
+def extract_thoughts(text: str) -> tuple[list[str], str]:
+    """
+    Extract THINK: blocks from model text.
+    Returns (list_of_thoughts, remaining_text_without_thinks).
+    """
+    thoughts = []
+    remaining_lines = []
+    
+    lines = text.split('\n')
+    current_think = None
+    
+    for line in lines:
+        stripped = line.strip()
+        if stripped.upper().startswith('THINK:'):
+            if current_think is not None:
+                thoughts.append(current_think.strip())
+            current_think = stripped[6:].strip()
+        elif current_think is not None:
+            # Continue multi-line think block
+            if stripped == '' or stripped.upper().startswith(('ACTION:', 'OBSERVE:', 'RESPOND:')):
+                thoughts.append(current_think.strip())
+                current_think = None
+                if stripped and not stripped.upper().startswith('THINK:'):
+                    remaining_lines.append(line)
+            else:
+                current_think += ' ' + stripped
+        else:
+            remaining_lines.append(line)
+    
+    # Flush last think block
+    if current_think is not None:
+        thoughts.append(current_think.strip())
+    
+    remaining = '\n'.join(remaining_lines).strip()
+    return thoughts, remaining
+
+
+def parse_retry_delay(error_msg: str) -> int:
+    """
+    Extract the retry delay (in seconds) from a Gemini 429 error message.
+    Falls back to 10 seconds if parsing fails.
+    """
+    match = re.search(r'retry\s*(?:in|after)\s+(\d+)', error_msg, re.IGNORECASE)
+    if match:
+        return min(int(match.group(1)), 60)  # Cap at 60s
+    # Try float format: "retryDelay": "53s"
+    match = re.search(r'"retryDelay":\s*"(\d+)s?"', error_msg)
+    if match:
+        return min(int(match.group(1)), 60)
+    return 10
+
+
+def format_api_error(error_msg: str) -> str:
+    """
+    Convert raw API error into a user-friendly message (Ukrainian).
+    """
+    if "RESOURCE_EXHAUSTED" in error_msg or "429" in error_msg:
+        if "limit: 0" in error_msg:
+            return (
+                "⚠️ Денний ліміт безкоштовного Gemini API вичерпано. "
+                "Спробуйте пізніше або оновіть API-ключ на https://aistudio.google.com/apikey"
+            )
+        return "⏳ API тимчасово перевантажено. Повторюю запит..."
+    if "INVALID_API_KEY" in error_msg or "API_KEY_INVALID" in error_msg:
+        return "🔑 Невалідний API-ключ Gemini. Перевірте GEMINI_API_KEY в .env"
+    if "PERMISSION_DENIED" in error_msg:
+        return "🔒 Доступ заборонено. Перевірте налаштування проєкту Google Cloud."
+    return f"Помилка API: {error_msg[:200]}"
+
+
+async def call_model_with_retry(chat, message, max_retries=MAX_RETRIES):
+    """
+    Send a message to the model with retry logic for rate limits.
+    Yields status events during waits. Returns (response, status_events).
+    """
+    status_events = []
+    last_error = None
+    
+    for attempt in range(max_retries):
+        try:
+            response = chat.send_message(message)
+            return response, status_events
+        except Exception as e:
+            error_msg = str(e)
+            last_error = e
+            
+            is_rate_limit = "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg
+            
+            if is_rate_limit and attempt < max_retries - 1:
+                # Check if it's a hard zero limit (daily exhausted)
+                if "limit: 0" in error_msg:
+                    raise  # No point retrying — daily quota is gone
+                    
+                delay = parse_retry_delay(error_msg)
+                status_events.append({
+                    'type': 'status', 
+                    'content': f'⏳ Rate limit — очікування {delay}с (спроба {attempt + 2}/{max_retries})...'
+                })
+                await asyncio.sleep(delay)
+            else:
+                raise
+    
+    raise last_error
+
+
+async def execute_agent(
+    system_prompt: str,
+    tools_config: list[str],
+    max_iterations: int,
+    user_message: str,
+    output_format: dict | None = None,
+    knowledge_sources: list[dict] | None = None,
+    api_integrations: list[dict] | None = None,
+    memory_config: dict | None = None,
+    conditions: list[dict] | None = None,
+    conversation_history: list[dict] | None = None,
+):
+    """
+    Executes the ReAct loop using Gemini 2.0 Flash.
+    Yields SSE events with real model reasoning.
+    All builder block configs are injected into the system prompt.
+    """
+    try:
+        client = get_client()
+    except Exception as e:
+        yield f"data: {json.dumps({'type': 'message', 'content': f'Помилка ініціалізації: {str(e)}'})}\n\n"
+        return
+
+    model = "gemini-2.0-flash"
+    
+    # Combine ReAct prefix with user's custom system prompt
+    full_system_prompt = REACT_SYSTEM_PREFIX
+    if system_prompt and system_prompt.strip():
+        full_system_prompt += f"\n\n## Additional Instructions from Agent Creator\n{system_prompt}"
+
+    # ─── Output Format ───
+    if output_format and output_format.get('format'):
+        fmt = output_format['format']
+        full_system_prompt += f"\n\n## Output Format\nAlways format your final response as {fmt}."
+        if fmt == 'json' and output_format.get('schema'):
+            full_system_prompt += f"\nFollow this JSON schema:\n```json\n{output_format['schema']}\n```"
+        elif fmt == 'markdown':
+            full_system_prompt += "\nUse proper Markdown with headers, bold, lists where appropriate."
+        elif fmt == 'csv':
+            full_system_prompt += "\nReturn data as CSV with a header row."
+        elif fmt == 'html':
+            full_system_prompt += "\nReturn properly structured HTML."
+
+    # ─── Knowledge Sources ───
+    if knowledge_sources:
+        knowledge_texts = []
+        for ks in knowledge_sources:
+            src_type = ks.get('source_type', 'url')
+            src_value = ks.get('source_value', '')
+            if not src_value:
+                continue
+            if src_type == 'text':
+                knowledge_texts.append(src_value[:4000])
+            elif src_type == 'url':
+                try:
+                    import httpx
+                    resp = httpx.get(src_value, timeout=10, follow_redirects=True)
+                    text = resp.text[:4000]
+                    knowledge_texts.append(f"Content from {src_value}:\n{text}")
+                except Exception:
+                    knowledge_texts.append(f"(Failed to fetch {src_value})")
+            elif src_type == 'file':
+                knowledge_texts.append(f"(File source configured: {src_value} — file reading not yet available)")
+        if knowledge_texts:
+            full_system_prompt += "\n\n## Knowledge Context\nUse the following knowledge as reference when answering:\n\n" + "\n---\n".join(knowledge_texts)
+
+    # ─── API Integrations (inform the model) ───
+    if api_integrations:
+        api_descriptions = []
+        for i, api in enumerate(api_integrations):
+            url = api.get('url', '')
+            method = api.get('method', 'GET')
+            if url:
+                api_descriptions.append(f"- API #{i+1}: {method} {url}")
+        if api_descriptions:
+            full_system_prompt += "\n\n## Available API Integrations\nYou have access to the call_api tool. The user has configured these endpoints:\n" + "\n".join(api_descriptions)
+            full_system_prompt += "\nUse the call_api tool when the user's question requires data from these endpoints."
+
+    # ─── Memory ───
+    if memory_config:
+        mem_type = memory_config.get('memory_type', 'session')
+        ttl = memory_config.get('ttl_minutes', 60)
+        full_system_prompt += f"\n\n## Memory\nYou have {mem_type} memory enabled (TTL: {ttl} minutes). Maintain context across messages and refer back to earlier parts of the conversation when relevant."
+
+    # ─── Conditions ───
+    if conditions:
+        cond_texts = []
+        for c in conditions:
+            expr = c.get('expression', '')
+            if expr:
+                cond_texts.append(f"- If `{expr}` is true, follow the True branch; otherwise follow the False branch.")
+        if cond_texts:
+            full_system_prompt += "\n\n## Conditional Logic\nApply these decision rules:\n" + "\n".join(cond_texts)
+
+    # ─── Unavailable Tools ───
+    unavailable = []
+    for tid in tools_config:
+        if tid in ('code_interpreter', 'image_generation', 'file_reader'):
+            unavailable.append(tid.replace('_', ' ').title())
+    if unavailable:
+        full_system_prompt += f"\n\n## Unavailable Tools\nThe following tools are configured but not yet available: {', '.join(unavailable)}. If the user requests these capabilities, politely inform them that these tools are coming soon."
+
+    # Map requested tools to actual functions
+    tool_funcs = []
+    if "web_search" in tools_config:
+        tool_funcs.append(web_search)
+    if "calculator" in tools_config:
+        tool_funcs.append(calculator)
+    if api_integrations and any(a.get('url') for a in api_integrations):
+        tool_funcs.append(call_api)
+        
+    config = types.GenerateContentConfig(
+        system_instruction=full_system_prompt,
+        temperature=0.7,
+        tools=tool_funcs if tool_funcs else None,
+    )
+    
+    # Status: connecting
+    yield f"data: {json.dumps({'type': 'status', 'content': 'Підключення до AI моделі...'})}\n\n"
+    
+    chat = client.chats.create(model=model, config=config)
+
+    # If conversation history exists (memory), prepend it
+    history_prefix = ""
+    if conversation_history:
+        history_lines = []
+        for msg in conversation_history[-10:]:  # Last 10 messages max
+            role = msg.get('role', 'user')
+            content = msg.get('content', '')
+            if content:
+                history_lines.append(f"{role.upper()}: {content[:500]}")
+        if history_lines:
+            history_prefix = "## Previous Conversation\n" + "\n".join(history_lines) + "\n\n## Current Message\n"
+
+    messages = [history_prefix + user_message if history_prefix else user_message]
+    
+    for i in range(max_iterations):
+        yield f"data: {json.dumps({'type': 'status', 'content': f'Крок {i+1}/{max_iterations} — модель аналізує...'})}\n\n"
+        
+        message_to_send = messages.pop() if messages else ""
+        
+        try:
+            response, status_events = await call_model_with_retry(chat, message_to_send)
+            # Emit any retry status events
+            for evt in status_events:
+                yield f"data: {json.dumps(evt)}\n\n"
+        except Exception as e:
+            friendly_msg = format_api_error(str(e))
+            yield f"data: {json.dumps({'type': 'message', 'content': friendly_msg})}\n\n"
+            break
+            
+        # --- Process tool calls ---
+        if response.function_calls:
+            # If there's also text with THINK: blocks, extract and emit them first
+            if response.text:
+                thoughts, _ = extract_thoughts(response.text)
+                for thought in thoughts:
+                    if thought:
+                        yield f"data: {json.dumps({'type': 'thought', 'content': thought})}\n\n"
+            
+            for function_call in response.function_calls:
+                tool_name = function_call.name
+                tool_args = function_call.args
+                
+                yield f"data: {json.dumps({'type': 'action', 'tool': tool_name, 'args': tool_args})}\n\n"
+                yield f"data: {json.dumps({'type': 'status', 'content': f'Виконую {tool_name}...'})}\n\n"
+                
+                # Execute tool
+                if tool_name == "web_search":
+                    result = await web_search(**tool_args)
+                elif tool_name == "calculator":
+                    result = await calculator(**tool_args)
+                elif tool_name == "call_api":
+                    result = await call_api(**tool_args)
+                else:
+                    result = f"Unknown tool: {tool_name}"
+                    
+                # Shorten observation for UI
+                obs_preview = str(result)[:500] + "..." if len(str(result)) > 500 else str(result)
+                yield f"data: {json.dumps({'type': 'observation', 'content': obs_preview})}\n\n"
+                
+                # Send tool result back to model
+                messages.append(
+                    types.Part.from_function_response(
+                        name=tool_name,
+                        response={"result": result}
+                    )
+                )
+            continue  # Next iteration to process tool results
+            
+        # --- Process text response ---
+        elif response.text:
+            thoughts, remaining = extract_thoughts(response.text)
+            
+            # Emit each thought as a separate SSE event
+            for thought in thoughts:
+                if thought:
+                    yield f"data: {json.dumps({'type': 'thought', 'content': thought})}\n\n"
+            
+            # Emit the final message (text without THINK: blocks)
+            final_text = remaining if remaining else response.text
+            if final_text.strip():
+                yield f"data: {json.dumps({'type': 'message', 'content': final_text})}\n\n"
+            break  # Done
+            
+    else:
+        yield f"data: {json.dumps({'type': 'message', 'content': 'Досягнуто ліміт ітерацій. Спробуйте збільшити максимальну кількість кроків.'})}\n\n"
